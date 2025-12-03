@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session Cloner - Claude Code</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen py-8">
+  <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+    <div class="mb-6">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Session Cloner</h1>
+      <p class="text-gray-600">Clone Claude Code sessions with selective removal of tool calls and thinking blocks</p>
+    </div>
+
+    <form id="clone-form" class="space-y-6">
+      <div>
+        <label for="sessionId" class="block text-sm font-medium text-gray-700 mb-2">
+          Session GUID
+        </label>
+        <input
+          type="text"
+          id="sessionId"
+          name="sessionId"
+          required
+          pattern="[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+          placeholder="e.g., 00a61603-c2ea-4d4c-aee8-4a292ab7b3f4"
+          class="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        <p class="mt-1 text-sm text-gray-500">Paste the session UUID from Claude Code</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label for="toolRemoval" class="block text-sm font-medium text-gray-700 mb-2">
+            Tool Call Removal
+          </label>
+          <select
+            id="toolRemoval"
+            name="toolRemoval"
+            class="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="none">None</option>
+            <option value="50">50% (oldest half)</option>
+            <option value="75">75% (oldest three-quarters)</option>
+            <option value="100">100% (all)</option>
+          </select>
+          <p class="mt-1 text-sm text-gray-500">Remove tool calls from oldest portion</p>
+        </div>
+
+        <div>
+          <label for="thinkingRemoval" class="block text-sm font-medium text-gray-700 mb-2">
+            Thinking Block Removal
+          </label>
+          <select
+            id="thinkingRemoval"
+            name="thinkingRemoval"
+            class="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="none">None</option>
+            <option value="50">50% (oldest half)</option>
+            <option value="75">75% (oldest three-quarters)</option>
+            <option value="100">100% (all)</option>
+          </select>
+          <p class="mt-1 text-sm text-gray-500">Remove thinking blocks from oldest portion</p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        id="submit-btn"
+        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+      >
+        Clone Session
+      </button>
+    </form>
+
+    <!-- Loading indicator -->
+    <div id="loading" class="hidden mt-6 text-center">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <p class="mt-2 text-gray-600">Cloning session...</p>
+    </div>
+
+    <!-- Success result -->
+    <div id="success-result" class="hidden mt-6 p-4 bg-green-50 border border-green-200 rounded-md">
+      <h3 class="text-lg font-semibold text-green-900 mb-2">✓ Session cloned successfully!</h3>
+      <div class="mb-4">
+        <p class="text-sm text-gray-700 mb-2"><strong>New Session ID:</strong></p>
+        <code id="new-session-id" class="block p-2 bg-white border border-gray-300 rounded text-sm font-mono break-all"></code>
+      </div>
+      <div class="mb-4">
+        <p class="text-sm text-gray-700 mb-2"><strong>Stats:</strong></p>
+        <ul id="stats-list" class="text-sm text-gray-600 space-y-1"></ul>
+      </div>
+      <div>
+        <p class="text-sm text-gray-700 mb-2"><strong>Resume command:</strong></p>
+        <div class="flex items-center gap-2">
+          <code id="resume-command" class="flex-1 p-2 bg-white border border-gray-300 rounded text-sm font-mono break-all"></code>
+          <button
+            id="copy-btn"
+            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded transition-colors duration-200"
+          >
+            Copy
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error result -->
+    <div id="error-result" class="hidden mt-6 p-4 bg-red-50 border border-red-200 rounded-md">
+      <h3 class="text-lg font-semibold text-red-900 mb-2">✗ Error</h3>
+      <p id="error-message" class="text-sm text-red-700"></p>
+    </div>
+  </div>
+
+  <script src="/js/clone.js?v=3"></script>
+</body>
+</html>
+

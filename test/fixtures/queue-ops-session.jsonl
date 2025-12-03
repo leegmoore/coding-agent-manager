@@ -1,0 +1,4 @@
+{"type":"queue-operation","uuid":null,"parentUuid":null,"sessionId":"55555555-5555-5555-5555-555555555555","cwd":"/test/project"}
+{"type":"queue-operation","uuid":null,"parentUuid":null,"sessionId":"55555555-5555-5555-5555-555555555555","cwd":"/test/project"}
+{"type":"file-history-snapshot","uuid":"file-snap-1","parentUuid":null,"sessionId":"55555555-5555-5555-5555-555555555555","files":["file1.ts","file2.ts"]}
+

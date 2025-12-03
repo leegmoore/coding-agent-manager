@@ -1,0 +1,10 @@
+{"type":"queue-operation","uuid":null,"parentUuid":null,"sessionId":"test-uuid-1234","cwd":"/test/project"}
+{"type":"user","uuid":"user-turn1","parentUuid":null,"sessionId":"test-uuid-1234","message":{"role":"user","content":"Solve this math problem: 2+2"}}
+{"type":"assistant","uuid":"assistant-turn1","parentUuid":"user-turn1","sessionId":"test-uuid-1234","message":{"role":"assistant","content":[{"type":"text","text":"The answer is 4."}],"stop_reason":"end_turn"}}
+{"type":"user","uuid":"user-turn2","parentUuid":"assistant-turn1","sessionId":"test-uuid-1234","message":{"role":"user","content":"What about 5+3?"}}
+{"type":"assistant","uuid":"assistant-turn2","parentUuid":"user-turn2","sessionId":"test-uuid-1234","message":{"role":"assistant","content":[{"type":"text","text":"The answer is 8."}],"stop_reason":"end_turn"}}
+{"type":"user","uuid":"user-turn3","parentUuid":"assistant-turn2","sessionId":"test-uuid-1234","message":{"role":"user","content":"Calculate 10*2"}}
+{"type":"assistant","uuid":"assistant-turn3","parentUuid":"user-turn3","sessionId":"test-uuid-1234","message":{"role":"assistant","content":[{"type":"text","text":"The answer is 20."}],"stop_reason":"end_turn"}}
+{"type":"user","uuid":"user-turn4","parentUuid":"assistant-turn3","sessionId":"test-uuid-1234","message":{"role":"user","content":"What is 7*3?"}}
+{"type":"assistant","uuid":"assistant-turn4","parentUuid":"user-turn4","sessionId":"test-uuid-1234","message":{"role":"assistant","content":[{"type":"thinking","thinking":"7 times 3 equals 21."},{"type":"text","text":"The answer is 21."}],"stop_reason":"end_turn"}}
+

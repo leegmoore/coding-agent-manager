@@ -1,0 +1,4 @@
+{"type":"queue-operation","uuid":null,"parentUuid":null,"sessionId":"11111111-1111-1111-1111-111111111111","cwd":"/test/project"}
+{"type":"user","uuid":"user-001","parentUuid":null,"sessionId":"11111111-1111-1111-1111-111111111111","message":{"role":"user","content":"Hello, how are you?"}}
+{"type":"assistant","uuid":"assistant-001","parentUuid":"user-001","sessionId":"11111111-1111-1111-1111-111111111111","message":{"role":"assistant","content":[{"type":"text","text":"I'm doing well, thank you!"}],"stop_reason":"end_turn"}}
+

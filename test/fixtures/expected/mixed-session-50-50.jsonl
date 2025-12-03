@@ -1,0 +1,10 @@
+{"type":"queue-operation","uuid":null,"parentUuid":null,"sessionId":"test-uuid-1234","cwd":"/test/project"}
+{"type":"user","uuid":"user-turn1","parentUuid":null,"sessionId":"test-uuid-1234","message":{"role":"user","content":"Get weather and think about it"}}
+{"type":"assistant","uuid":"assistant-turn1-2","parentUuid":"user-turn1","sessionId":"test-uuid-1234","message":{"role":"assistant","content":[{"type":"text","text":"It's 72°F in San Francisco."}],"stop_reason":"end_turn"}}
+{"type":"user","uuid":"user-turn2","parentUuid":"assistant-turn1-2","sessionId":"test-uuid-1234","message":{"role":"user","content":"Tell me about Paris weather"}}
+{"type":"assistant","uuid":"assistant-turn2-2","parentUuid":"user-turn2","sessionId":"test-uuid-1234","message":{"role":"assistant","content":[{"type":"text","text":"Paris is 60°F."}],"stop_reason":"end_turn"}}
+{"type":"user","uuid":"user-turn3","parentUuid":"assistant-turn2-2","sessionId":"test-uuid-1234","message":{"role":"user","content":"What about London?"}}
+{"type":"assistant","uuid":"assistant-turn3","parentUuid":"user-turn3","sessionId":"test-uuid-1234","message":{"role":"assistant","content":[{"type":"text","text":"I don't have a tool for London, but I can help you find it."}],"stop_reason":"end_turn"}}
+{"type":"user","uuid":"user-turn4","parentUuid":"assistant-turn3","sessionId":"test-uuid-1234","message":{"role":"user","content":"Just think about it"}}
+{"type":"assistant","uuid":"assistant-turn4","parentUuid":"user-turn4","sessionId":"test-uuid-1234","message":{"role":"assistant","content":[{"type":"thinking","thinking":"User wants me to think"},{"type":"text","text":"I'm thinking about the weather."}],"stop_reason":"end_turn"}}
+

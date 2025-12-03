@@ -1,0 +1,10 @@
+{"type":"queue-operation","uuid":null,"parentUuid":null,"sessionId":"test-uuid-1234","cwd":"/test/project"}
+{"type":"user","uuid":"user-turn1","parentUuid":null,"sessionId":"test-uuid-1234","message":{"role":"user","content":"What's the weather?"}}
+{"type":"assistant","uuid":"assistant-turn1-2","parentUuid":"user-turn1","sessionId":"test-uuid-1234","message":{"role":"assistant","content":[{"type":"text","text":"The weather is 72°F and sunny."}],"stop_reason":"end_turn"}}
+{"type":"user","uuid":"user-turn2","parentUuid":"assistant-turn1-2","sessionId":"test-uuid-1234","message":{"role":"user","content":"What about New York?"}}
+{"type":"assistant","uuid":"assistant-turn2-2","parentUuid":"user-turn2","sessionId":"test-uuid-1234","message":{"role":"assistant","content":[{"type":"text","text":"New York is 65°F and cloudy."}],"stop_reason":"end_turn"}}
+{"type":"user","uuid":"user-turn3","parentUuid":"assistant-turn2-2","sessionId":"test-uuid-1234","message":{"role":"user","content":"Tell me about London"}}
+{"type":"assistant","uuid":"assistant-turn3-2","parentUuid":"user-turn3","sessionId":"test-uuid-1234","message":{"role":"assistant","content":[{"type":"text","text":"London is 55°F and rainy."}],"stop_reason":"end_turn"}}
+{"type":"user","uuid":"user-turn4","parentUuid":"assistant-turn3-2","sessionId":"test-uuid-1234","message":{"role":"user","content":"What about Tokyo?"}}
+{"type":"assistant","uuid":"assistant-turn4-2","parentUuid":"user-turn4","sessionId":"test-uuid-1234","message":{"role":"assistant","content":[{"type":"text","text":"Tokyo is 78°F and humid."}],"stop_reason":"end_turn"}}
+
