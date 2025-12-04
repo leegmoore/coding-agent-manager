@@ -3,10 +3,19 @@ import { readdir, stat } from "fs/promises";
 import { randomUUID } from "crypto";
 import path from "path";
 import { CloneRequest, CloneResponse } from "../schemas/clone.js";
+import type { CloneRequestV2, CloneResponseV2 } from "../schemas/clone-v2.js";
 import { SessionNotFoundError } from "../errors.js";
-import type { SessionEntry, Turn, RemovalOptions } from "../types.js";
-import { config } from "../config.js";
+import type {
+  SessionEntry,
+  Turn,
+  RemovalOptions,
+  CompressionStats,
+  CompressionTask,
+} from "../types.js";
+import { config, loadCompressionConfig } from "../config.js";
 import { logLineage } from "./lineage-logger.js";
+import { compressMessages } from "./compression.js";
+import { writeCompressionDebugLog } from "./compression-debug-logger.js";
 
 /**
  * Find session file by searching all project directories
@@ -342,6 +351,124 @@ export async function cloneSession(request: CloneRequest): Promise<CloneResponse
       outputTurnCount,
       toolCallsRemoved,
       thinkingBlocksRemoved,
+    },
+  };
+}
+
+/**
+ * Clone session with selective removal and LLM-based compression (v2)
+ */
+export async function cloneSessionV2(
+  request: CloneRequestV2
+): Promise<CloneResponseV2> {
+  // 1. Find and load source session
+  const sourcePath = await findSessionFile(request.sessionId);
+  const sourceContent = await readFile(sourcePath, "utf-8");
+
+  // 2. Parse and identify turns
+  let entries = parseSession(sourceContent);
+  const turns = identifyTurns(entries);
+  const originalTurnCount = turns.length;
+
+  let compressionStats: CompressionStats | undefined;
+  let compressionTasks: CompressionTask[] = [];
+  let originalEntries: SessionEntry[] | undefined;
+
+  // 3. Apply compression if specified (BEFORE tool removal for accurate stats)
+  if (request.compressionBands && request.compressionBands.length > 0) {
+    // Deep clone entries before compression if debug logging enabled
+    if (request.debugLog) {
+      originalEntries = JSON.parse(JSON.stringify(entries)) as SessionEntry[];
+    }
+
+    const compressionConfig = loadCompressionConfig();
+    const compressionResult = await compressMessages(
+      entries,
+      turns,
+      request.compressionBands,
+      compressionConfig
+    );
+    entries = compressionResult.entries;
+    compressionStats = compressionResult.stats;
+    compressionTasks = compressionResult.tasks;
+  }
+
+  // 4. Apply tool/thinking removal (same as v1)
+  const removalOptions: RemovalOptions = {
+    toolRemoval: request.toolRemoval ?? "none",
+    thinkingRemoval: request.thinkingRemoval ?? "none",
+  };
+
+  const {
+    entries: modifiedEntries,
+    toolCallsRemoved,
+    thinkingBlocksRemoved,
+  } = applyRemovals(entries, removalOptions);
+
+  // 5. Repair UUID chain
+  const repairedEntries = repairParentUuidChain(modifiedEntries);
+
+  // 6. Generate new session ID and update entries
+  const newSessionId = randomUUID();
+  const finalEntries = repairedEntries.map((entry) => ({
+    ...entry,
+    ...(entry.sessionId != null ? { sessionId: newSessionId } : {}),
+  }));
+
+  // 7. Calculate output turn count
+  const outputTurns = identifyTurns(finalEntries);
+  const outputTurnCount = outputTurns.length;
+
+  // 8. Write output file
+  const sourceDir = path.dirname(sourcePath);
+  const outputPath = path.join(sourceDir, `${newSessionId}.jsonl`);
+  const outputContent =
+    finalEntries.map((e) => JSON.stringify(e)).join("\n") + "\n";
+  await writeFile(outputPath, outputContent, "utf-8");
+
+  // 9. Log lineage with compression info
+  await logLineage({
+    timestamp: new Date().toISOString(),
+    targetId: newSessionId,
+    targetPath: outputPath,
+    sourceId: request.sessionId,
+    sourcePath,
+    toolRemoval: request.toolRemoval ?? "none",
+    thinkingRemoval: request.thinkingRemoval ?? "none",
+    compressionBands: request.compressionBands,
+    compressionStats,
+  });
+
+  // 10. Write debug log if requested
+  if (request.debugLog && originalEntries && compressionTasks.length > 0) {
+    try {
+      const debugLogDir = path.join(process.cwd(), "clone-debug-log");
+      await writeCompressionDebugLog(
+        request.sessionId,
+        newSessionId,
+        sourcePath,
+        outputPath,
+        originalEntries,
+        finalEntries,
+        compressionTasks,
+        debugLogDir
+      );
+    } catch (error) {
+      // Don't fail clone if debug log fails
+      console.error(`[debug] Failed to write compression debug log:`, error);
+    }
+  }
+
+  // 11. Return response with all stats
+  return {
+    success: true,
+    outputPath,
+    stats: {
+      originalTurnCount,
+      outputTurnCount,
+      toolCallsRemoved,
+      thinkingBlocksRemoved,
+      compression: compressionStats,
     },
   };
 }

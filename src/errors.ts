@@ -1,6 +1,6 @@
 export class NotImplementedError extends Error {
-  constructor(method: string) {
-    super(`${method} is not implemented`);
+  constructor(methodName: string) {
+    super(`Not implemented: ${methodName}`);
     this.name = "NotImplementedError";
   }
 }
@@ -12,4 +12,9 @@ export class SessionNotFoundError extends Error {
   }
 }
 
-
+export class ConfigMissingError extends Error {
+  constructor(configName: string) {
+    super(`Required configuration missing: ${configName}`);
+    this.name = "ConfigMissingError";
+  }
+}

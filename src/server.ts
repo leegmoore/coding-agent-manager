@@ -10,6 +10,7 @@ dotenv.config({ path: path.join(__dirname, "../.env") });
 
 import express from "express";
 import { cloneRouter } from "./routes/clone.js";
+import { cloneRouterV2 } from "./routes/clone-v2.js";
 import { config } from "./config.js";
 
 const app = express();
@@ -30,6 +31,7 @@ app.get("/health", (req, res) => {
 
 // API routes
 app.use("/api", cloneRouter);
+app.use("/api/v2", cloneRouterV2);
 
 // Server-rendered pages
 app.get("/", (req, res) => {
