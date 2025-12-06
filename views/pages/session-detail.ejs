@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session Detail - Context Visualizer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-8">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">Session Detail</h1>
+
+    <!-- Session Input -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <div class="flex gap-4">
+        <input type="text" id="sessionInput" aria-label="Session ID" placeholder="Enter session ID (UUID)"
+               class="flex-1 px-4 py-2 border rounded focus:outline-none focus:ring-2">
+        <button id="loadButton" aria-label="Load session" class="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          Load
+        </button>
+      </div>
+      <div id="errorMessage" role="alert" class="mt-2 text-red-500 hidden"></div>
+      <div id="loadingIndicator" aria-live="polite" class="mt-2 text-blue-500 hidden">Loading session...</div>
+    </div>
+
+    <!-- Visualization Section (hidden until loaded) -->
+    <div id="visualizationSection" class="hidden">
+      <!-- Turn Navigation -->
+      <div class="bg-white rounded-lg shadow p-4 mb-4">
+        <div class="flex items-center gap-4 mb-4">
+          <button id="leftButton" aria-label="Previous turn" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">
+            ←
+          </button>
+          <input type="number" id="turnInput" aria-label="Turn input" min="0" value="0"
+                 class="w-20 px-2 py-1 border rounded text-center">
+          <button id="rightButton" aria-label="Next turn" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">
+            →
+          </button>
+          <span id="turnLabel" class="text-gray-600">Turn 0 of 0</span>
+        </div>
+        <input type="range" id="turnSlider" aria-label="Turn slider" min="0" max="0" value="0" class="w-full">
+      </div>
+
+      <!-- Scale Control -->
+      <div class="bg-white rounded-lg shadow p-4 mb-4">
+        <div class="flex items-center gap-4">
+          <label class="text-gray-600">Scale (k tokens):</label>
+          <input type="number" id="scaleInput" aria-label="Scale input" min="50" max="2000" value="200"
+                 class="w-24 px-2 py-1 border rounded text-center">
+          <span id="scaleWarning" class="text-orange-500 hidden">
+            ⚠️ Auto-expanded to fit context
+          </span>
+        </div>
+      </div>
+
+      <!-- Visualization Container -->
+      <div class="bg-white rounded-lg shadow p-4 mb-4">
+        <div class="flex gap-4 mb-4">
+          <span class="flex items-center gap-1"><span class="w-4 h-4 bg-blue-500 inline-block"></span> User</span>
+          <span class="flex items-center gap-1"><span class="w-4 h-4 bg-green-500 inline-block"></span> Assistant</span>
+          <span class="flex items-center gap-1"><span class="w-4 h-4 bg-purple-500 inline-block"></span> Thinking</span>
+          <span class="flex items-center gap-1"><span class="w-4 h-4 bg-orange-500 inline-block"></span> Tool</span>
+        </div>
+        <div id="visualizationContainer" class="border rounded" style="width: 800px; height: 500px;">
+          <!-- D3 renders here -->
+        </div>
+        <div id="tokenStats" class="mt-2 text-sm text-gray-600"></div>
+      </div>
+
+      <!-- Turn Detail Card -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold mb-4">Turn Content</h2>
+        <div id="detailCard" class="prose max-w-none">
+          <!-- Markdown content renders here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/js/pages/session-detail.js"></script>
+</body>
+</html>
+

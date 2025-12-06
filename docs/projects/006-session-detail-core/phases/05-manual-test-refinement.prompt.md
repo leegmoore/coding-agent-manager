@@ -1,359 +1,227 @@
-# Phase 5: Manual Test + UI Refinement
+# Phase 5: Collaborative Manual Testing
 
-## Role
+## Overview
 
-You are a Senior QA/UX Engineer conducting manual testing and UI refinement for the Session Detail Core feature. Your task is to test the feature with real sessions, identify integration issues, and refine the UX based on observations. This phase is more exploratory than previous phases.
-
----
-
-## Application Overview
-
-**coding-agent-manager** is a web application for managing Claude Code sessions. The Session Detail Core feature has been implemented in Phases 1-4:
-- API: `GET /api/session/:id/turns`
-- UI: `/session-detail` page with visualization and navigation
+This is a collaborative testing session between us. I'll run backend checks and provide you with URLs/session IDs. You'll verify the frontend. We'll work through issues together in real-time.
 
 ---
 
-## Feature Overview
+## Test Sessions
 
-**Session Detail Core** provides:
-1. Session ID input + Load button
-2. Turn navigation (buttons, input, slider)
-3. Vertical band visualization (User, Assistant, Thinking, Tool)
-4. Scale input (50k-2000k) with auto-expand warning
-5. Turn detail card showing selected turn's content
+These sessions are confirmed to exist and have varied characteristics:
 
----
-
-## Phase Scope
-
-1. **Manual Testing** - Systematic testing with real sessions
-2. **Integration Fixes** - Address any issues between API and UI
-3. **UX Refinement** - Improve usability based on observations
-4. **Edge Cases** - Handle unusual sessions gracefully
-5. **Browser Compatibility** - Verify in major browsers
-
-This phase is ad-hoc and exploratory. Follow the test plan but also investigate anything unusual.
+| Session ID | Description | Use For |
+|------------|-------------|---------|
+| `84e0d3f1-f2ee-4560-87da-05ae7f33a6f0` | Large session, many turns | General testing, navigation |
+| `b507f294-b58a-4088-bae4-2815040e4a07` | Heavy tools/thinking | Visualization balance |
+| `122e1483-0ac1-463e-a776-b12f879f35cf` | Multi-turn conversation | Turn navigation |
 
 ---
 
-## Reference Documents
+## Part 1: Pre-Flight (I do)
 
-### Feature Specification
-**File:** `/Users/leemoore/code/codex-port-02/coding-agent-manager/docs/projects/006-session-detail-core/01-session-detail-core.feature.md`
+Before we start, I'll verify:
 
-All acceptance criteria should be verified.
+1. **Server running** - `curl http://localhost:3000/`
+2. **API endpoint works** - `curl http://localhost:3000/api/session/{id}/turns`
+3. **Page loads** - `curl http://localhost:3000/session-detail`
+4. **Automated tests pass** - `npm test`
 
-### Technical Design
-**File:** `/Users/leemoore/code/codex-port-02/coding-agent-manager/docs/projects/006-session-detail-core/02-session-detail-core.tech-design.md`
-
-Phase 5 section lists test sessions and verification activities.
-
----
-
-## Test Plan
-
-### Test Sessions
-
-Use sessions with varying characteristics:
-
-| Category | Session ID | Notes |
-|----------|------------|-------|
-| Small | Find a session with <10 turns | Verify navigation at edges |
-| Medium | Find a session with 50-100 turns | Typical usage |
-| Large | Find a session with 200+ turns | Performance, scrolling |
-| Heavy Thinking | Find a thinking-intensive session | Purple band dominates |
-| Heavy Tools | Find a tool-intensive session | Orange band dominates |
-| Mixed | This current session | All content types |
-
-To find sessions, look in `~/.claude/projects/` directories.
-
-### Test Cases
-
-#### TC-A: Session Loading
-
-1. **Valid Session Load**
-   - Enter a valid session ID
-   - Click Load
-   - Verify visualization appears at latest turn
-   - Verify navigation controls show correct max turn
-
-2. **Invalid Session ID**
-   - Enter "not-a-uuid"
-   - Click Load
-   - Verify error message appears
-
-3. **Non-existent Session**
-   - Enter a valid UUID format that doesn't exist
-   - Click Load
-   - Verify 404-style error message
-
-4. **Empty Session ID**
-   - Leave input empty
-   - Click Load
-   - Verify error message
-
-#### TC-B: Turn Navigation
-
-1. **Left Button**
-   - Load a session, navigate to turn 5
-   - Click left button
-   - Verify turn decrements to 4
-   - Verify all controls sync
-
-2. **Right Button**
-   - From turn 4, click right button
-   - Verify turn increments to 5
-
-3. **Left Button Disabled**
-   - Navigate to turn 0
-   - Verify left button is disabled
-
-4. **Right Button Disabled**
-   - Navigate to max turn
-   - Verify right button is disabled
-
-5. **Turn Input**
-   - Enter a specific turn number
-   - Press Enter or blur
-   - Verify navigation updates
-
-6. **Turn Input Bounds**
-   - Enter a number greater than max
-   - Verify it clamps to max
-
-7. **Slider**
-   - Drag slider
-   - Verify smooth updates
-   - Verify other controls sync
-
-8. **Rapid Navigation**
-   - Click left/right rapidly
-   - Verify no glitches or errors
-
-#### TC-C: Visualization
-
-1. **Band Display**
-   - Verify 4 distinct colored bands
-   - Verify colors match legend
-
-2. **Token Proportions**
-   - Find a turn with varied token distribution
-   - Verify band heights reflect relative tokens
-
-3. **Scale Input**
-   - Change scale to different values
-   - Verify bands resize proportionally
-
-4. **Scale Bounds**
-   - Enter value below 50
-   - Verify clamps to 50
-   - Enter value above 2000
-   - Verify clamps to 2000
-
-5. **Auto-Expand Warning**
-   - Find or navigate to a turn with context > current scale
-   - Verify warning appears
-   - Verify scale auto-expands
-
-6. **Token Labels**
-   - Verify token counts display on/near bands
-   - Verify formatting (k, M suffixes)
-
-#### TC-D: Turn Detail Card
-
-1. **Content Display**
-   - Verify user prompt shows
-   - Verify tool calls show (if any)
-   - Verify assistant response shows
-
-2. **Tool Truncation**
-   - Find a turn with verbose tool calls
-   - Verify first 2 lines + ellipsis
-
-3. **Card Updates**
-   - Navigate between turns
-   - Verify card updates to show new turn's content
-
-4. **Long Content**
-   - Find a turn with very long content
-   - Verify scrolling works
-   - Verify no layout breaks
-
-#### TC-E: Edge Cases
-
-1. **Empty Turn**
-   - If a turn has minimal content
-   - Verify graceful display
-
-2. **No Tool Calls**
-   - Turn without tool calls
-   - Verify tool section hidden or shows "None"
-
-3. **No Thinking**
-   - Session without thinking blocks
-   - Verify thinking band shows 0 or is minimal
-
-4. **Very Large Context**
-   - Session with 500k+ tokens
-   - Verify auto-expand handles it
-   - Verify performance is acceptable
-
-#### TC-F: Browser Compatibility
-
-1. **Chrome** - Full test
-2. **Firefox** - Basic test
-3. **Safari** - Basic test (if on Mac)
+I'll report results before we proceed.
 
 ---
 
-## Common Issues to Look For
+## Part 2: Backend Verification (I do)
 
-1. **Layout Breaks**
-   - Content overflowing containers
-   - Bands not aligning
-   - Card not scrolling
+I'll test the API with curl and show you the results:
 
-2. **Performance**
-   - Slow rendering on large sessions
-   - Lag during navigation
+```bash
+# Valid session
+curl -s http://localhost:3000/api/session/84e0d3f1-f2ee-4560-87da-05ae7f33a6f0/turns | head -c 500
 
-3. **State Sync**
-   - Controls out of sync after rapid navigation
-   - Scale not updating correctly
+# Invalid UUID format
+curl -s http://localhost:3000/api/session/not-a-uuid/turns
 
-4. **Error Handling**
-   - Errors not displayed clearly
-   - Console errors
-
-5. **Accessibility**
-   - Focus indicators
-   - Keyboard navigation
-   - Screen reader labels
-
----
-
-## Refinement Checklist
-
-Based on testing, consider these refinements:
-
-- [ ] Loading indicator during API call
-- [ ] Clearer error messages
-- [ ] Better keyboard navigation
-- [ ] Responsive design for smaller screens
-- [ ] Improved color contrast
-- [ ] Hover states for interactive elements
-- [ ] Better tool content display
-- [ ] Turn transition animation
-- [ ] Cumulative stats summary
-
----
-
-## Definition of Done
-
-- [ ] All TC-A through TC-F test cases executed
-- [ ] Issues documented with reproduction steps
-- [ ] Critical issues fixed
-- [ ] UX refinements applied
-- [ ] Browser compatibility verified
-- [ ] Final regression test passed
-- [ ] All automated tests still pass
-
----
-
-## Output Format
-
-Upon completion, provide a report in this format:
-
-```markdown
-# Phase 5 Completion Report: Manual Test + UI Refinement
-
-## Test Sessions Used
-| Category | Session ID | Turns | Notes |
-|----------|------------|-------|-------|
-| Small | xxx-xxx | X | ... |
-| Medium | xxx-xxx | X | ... |
-| Large | xxx-xxx | X | ... |
-| Heavy Thinking | xxx-xxx | X | ... |
-| Heavy Tools | xxx-xxx | X | ... |
-
-## Test Results Summary
-
-### TC-A: Session Loading
-| Test | Result | Notes |
-|------|--------|-------|
-| Valid Session Load | PASS/FAIL | ... |
-| Invalid Session ID | PASS/FAIL | ... |
-| Non-existent Session | PASS/FAIL | ... |
-| Empty Session ID | PASS/FAIL | ... |
-
-### TC-B: Turn Navigation
-| Test | Result | Notes |
-|------|--------|-------|
-| Left Button | PASS/FAIL | ... |
-| Right Button | PASS/FAIL | ... |
-| ... | ... | ... |
-
-### TC-C: Visualization
-| Test | Result | Notes |
-|------|--------|-------|
-| Band Display | PASS/FAIL | ... |
-| ... | ... | ... |
-
-### TC-D: Turn Detail Card
-| Test | Result | Notes |
-|------|--------|-------|
-| Content Display | PASS/FAIL | ... |
-| ... | ... | ... |
-
-### TC-E: Edge Cases
-| Test | Result | Notes |
-|------|--------|-------|
-| ... | ... | ... |
-
-### TC-F: Browser Compatibility
-| Browser | Result | Notes |
-|---------|--------|-------|
-| Chrome | PASS/FAIL | ... |
-| Firefox | PASS/FAIL | ... |
-| Safari | PASS/FAIL | ... |
-
-## Issues Found
-
-### Critical Issues
-| Issue | Reproduction | Fix Applied |
-|-------|--------------|-------------|
-| ... | ... | ... |
-
-### Minor Issues
-| Issue | Reproduction | Status |
-|-------|--------------|--------|
-| ... | ... | Fixed/Deferred |
-
-## UX Refinements Applied
-- [ ] Refinement 1: description
-- [ ] Refinement 2: description
-- [ ] ...
-
-## Definition of Done Checklist
-- [ ] All test cases executed
-- [ ] Issues documented
-- [ ] Critical issues fixed
-- [ ] UX refinements applied
-- [ ] Browser compatibility verified
-- [ ] Final regression passed
-- [ ] Automated tests pass: X/Y
-
-## Files Modified
-- [ ] `file1.js` - description of change
-- [ ] `file2.ejs` - description of change
-
-## Implementation Notes
-[Any notes about issues found, fixes applied, or decisions made]
-
-## Feedback & Recommendations
-[Observations about the app, phase spec, feature design, or general recommendations for future work]
-
-### For 007-session-detail-refine
-[Specific recommendations or considerations for the next feature phase based on what was learned]
+# Non-existent session
+curl -s http://localhost:3000/api/session/00000000-0000-0000-0000-000000000000/turns
 ```
+
+Expected:
+- Valid → 200 with turn data
+- Invalid UUID → 400
+- Non-existent → 404
+
+---
+
+## Part 3: Frontend Testing (You do)
+
+### 3.1 Basic Load
+
+1. Open: http://localhost:3000/session-detail
+2. Verify page loads with empty state
+3. Enter session ID: `84e0d3f1-f2ee-4560-87da-05ae7f33a6f0`
+4. Click Load
+
+**Tell me:**
+- Does the visualization appear?
+- What turn number shows?
+- Any errors in console?
+
+### 3.2 Query Param Load
+
+1. Open: http://localhost:3000/session-detail?id=84e0d3f1-f2ee-4560-87da-05ae7f33a6f0
+2. Verify it auto-loads the session
+
+**Tell me:**
+- Did it auto-load?
+- Or did you have to click Load?
+
+### 3.3 Turn Navigation
+
+With a session loaded:
+
+1. Click left arrow - does turn decrement?
+2. Click right arrow - does turn increment?
+3. Type a number in turn input - does it jump?
+4. Drag slider - does it update?
+5. Go to turn 0 - is left arrow disabled?
+6. Go to max turn - is right arrow disabled?
+
+**Tell me:**
+- Do all controls stay in sync?
+- Any lag or glitches?
+
+### 3.4 Visualization
+
+1. Look at the 4 colored bands (User, Assistant, Thinking, Tool)
+2. Change scale input (try 100, 500, 1000)
+3. Navigate between turns
+
+**Tell me:**
+- Do bands resize when scale changes?
+- Do band heights change between turns?
+- Does legend match band colors?
+
+### 3.5 Turn Detail Card
+
+1. Look at the card below visualization
+2. Navigate to different turns
+
+**Tell me:**
+- Do you see user prompt?
+- Do you see tool calls (if any)?
+- Do you see assistant response?
+- Does card update when you change turns?
+
+---
+
+## Part 4: Integration Scenarios
+
+### Scenario 1: Error Handling
+
+1. Enter invalid UUID: `not-a-uuid`
+2. Click Load
+
+**Expected:** Error message appears
+**Tell me:** What do you see?
+
+### Scenario 2: Non-existent Session
+
+1. Enter: `00000000-0000-0000-0000-000000000000`
+2. Click Load
+
+**Expected:** "Session not found" message
+**Tell me:** What do you see?
+
+### Scenario 3: Heavy Session
+
+1. Load: `b507f294-b58a-4088-bae4-2815040e4a07`
+2. Navigate through turns
+
+**Tell me:**
+- How do the bands look? Which color dominates?
+- Is navigation smooth or laggy?
+
+### Scenario 4: Scale Auto-Expand
+
+1. Load any session
+2. Set scale to 50
+3. Navigate to later turns
+
+**Expected:** If context exceeds 50k, warning appears and scale expands
+**Tell me:** Does this happen?
+
+### Scenario 5: Rapid Navigation
+
+1. Load a session with many turns
+2. Click left/right arrows rapidly (10+ times fast)
+
+**Tell me:**
+- Does it keep up?
+- Any errors or freezing?
+
+---
+
+## Part 5: Issue Tracking
+
+As we find issues, I'll track them here:
+
+| # | Issue | Severity | Status |
+|---|-------|----------|--------|
+| 1 | | | |
+| 2 | | | |
+| 3 | | | |
+
+For each issue you report, I'll either:
+- Fix it immediately
+- Note it for later
+- Explain why it's expected behavior
+
+---
+
+## Part 6: Sign-Off Checklist
+
+We'll check these off together:
+
+**Backend:**
+- [ ] API returns 200 for valid session
+- [ ] API returns 400 for invalid UUID
+- [ ] API returns 404 for non-existent session
+
+**Frontend - Loading:**
+- [ ] Page loads at /session-detail
+- [ ] Session loads on button click
+- [ ] Query param ?id= auto-loads session
+- [ ] Error messages display for invalid input
+
+**Frontend - Navigation:**
+- [ ] Turn input works
+- [ ] Left/right buttons work
+- [ ] Slider works
+- [ ] All controls stay in sync
+- [ ] Boundary conditions handled (turn 0, max turn)
+
+**Frontend - Visualization:**
+- [ ] 4 colored bands display
+- [ ] Colors match legend
+- [ ] Band heights reflect token proportions
+- [ ] Scale input adjusts visualization
+- [ ] Auto-expand warning works
+
+**Frontend - Detail Card:**
+- [ ] User prompt displays
+- [ ] Tool calls display (truncated)
+- [ ] Assistant response displays
+- [ ] Card updates on turn change
+
+---
+
+## Ready to Start
+
+When you're ready, I'll:
+1. Start the server (if not running)
+2. Run pre-flight checks
+3. Test backend endpoints
+4. Give you the go-ahead to start frontend testing
+
+Say "go" and we'll begin.

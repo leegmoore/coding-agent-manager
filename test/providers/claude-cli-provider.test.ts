@@ -51,7 +51,15 @@ describe("ClaudeCliProvider", () => {
 
       expect(spawn).toHaveBeenCalledWith(
         "claude",
-        ["-p", "--model", "haiku", "--output-format", "json"],
+      [
+        "-p",
+        "--model",
+        "claude-haiku-4-5-20251001",
+        "--output-format",
+        "json",
+        "--max-turns",
+        "1",
+      ],
         expect.objectContaining({ stdio: ["pipe", "pipe", "pipe"] })
       );
     });
@@ -70,7 +78,15 @@ describe("ClaudeCliProvider", () => {
 
       expect(spawn).toHaveBeenCalledWith(
         "claude",
-        ["-p", "--model", "opus", "--output-format", "json"],
+      [
+        "-p",
+        "--model",
+        "claude-opus-4-5-20251101",
+        "--output-format",
+        "json",
+        "--max-turns",
+        "1",
+      ],
         expect.objectContaining({ stdio: ["pipe", "pipe", "pipe"] })
       );
     });

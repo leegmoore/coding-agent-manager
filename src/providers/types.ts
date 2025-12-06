@@ -22,4 +22,4 @@ export interface LlmProvider {
   ): Promise<string>;
 }
 
-export type ProviderType = "openrouter" | "cc-cli";
+export type ProviderType = "openrouter" | "cc-cli" | "claude-sdk";

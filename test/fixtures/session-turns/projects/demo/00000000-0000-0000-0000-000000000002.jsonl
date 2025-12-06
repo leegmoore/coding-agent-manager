@@ -1,0 +1,2 @@
+{"type":"user","uuid":"u1","parentUuid":null,"sessionId":"00000000-0000-0000-0000-000000000002","message":{"role":"user","content":"hello world"}}
+{"type":"assistant","uuid":"a1","parentUuid":"u1","sessionId":"00000000-0000-0000-0000-000000000002","message":{"role":"assistant","content":[{"type":"text","text":"hi there"}],"stop_reason":"end_turn"}}

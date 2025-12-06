@@ -1,6 +1,7 @@
 import type { LlmProvider, ProviderType } from "./types.js";
 import { ClaudeCliProvider } from "./claude-cli-provider.js";
 import { OpenRouterProvider } from "./openrouter-provider.js";
+import { ClaudeSdkProvider } from "./claude-sdk-provider.js";
 import { ConfigMissingError } from "../errors.js";
 
 let cachedProvider: LlmProvider | null = null;
@@ -29,6 +30,9 @@ export function getProvider(): LlmProvider {
       break;
     case "cc-cli":
       cachedProvider = new ClaudeCliProvider();
+      break;
+    case "claude-sdk":
+      cachedProvider = new ClaudeSdkProvider();
       break;
     default:
       throw new ConfigMissingError(`Invalid LLM_PROVIDER: ${providerType}`);

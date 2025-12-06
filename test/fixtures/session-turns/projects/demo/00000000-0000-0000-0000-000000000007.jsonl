@@ -1,0 +1,4 @@
+{"type":"user","uuid":"u1","parentUuid":null,"sessionId":"00000000-0000-0000-0000-000000000007","message":{"role":"user","content":[{"type":"text","text":"array text user"}]}}
+{"type":"assistant","uuid":"a1","parentUuid":"u1","sessionId":"00000000-0000-0000-0000-000000000007","message":{"role":"assistant","content":"assistant string response"}}
+{"type":"user","uuid":"u2","parentUuid":"a1","sessionId":"00000000-0000-0000-0000-000000000007","message":{"role":"user","content":"user string content"}}
+{"type":"assistant","uuid":"a2","parentUuid":"u2","sessionId":"00000000-0000-0000-0000-000000000007","message":{"role":"assistant","content":[{"type":"text","text":"assistant array text"}],"stop_reason":"end_turn"}}

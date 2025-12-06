@@ -71,8 +71,16 @@ CONTENT`;
     level: CompressionLevel,
     useLargeModel: boolean
   ): Promise<string> {
-    const model = useLargeModel ? "opus" : "haiku";
+    const model = useLargeModel
+      ? "claude-opus-4-5-20251101"
+      : "claude-haiku-4-5-20251001";
     const prompt = this.buildPrompt(text, level);
+    const env = { ...process.env };
+    if (useLargeModel) {
+      env.MAX_THINKING_TOKENS = "8000";
+    } else {
+      delete env.MAX_THINKING_TOKENS;
+    }
 
     return new Promise((resolve, reject) => {
       const child = spawn(
@@ -80,6 +88,7 @@ CONTENT`;
         ["-p", "--model", model, "--output-format", "json", "--max-turns", "1"],
         {
           stdio: ["pipe", "pipe", "pipe"],
+          env,
         }
       );
 

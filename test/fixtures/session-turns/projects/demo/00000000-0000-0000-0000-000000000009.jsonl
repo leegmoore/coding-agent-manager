@@ -1,0 +1,2 @@
+{"type":"summary","uuid":"s1","parentUuid":null,"sessionId":"00000000-0000-0000-0000-000000000009","isMeta":true,"message":{"role":"system","content":"summary here"}}
+{"type":"file-history-snapshot","uuid":"f1","parentUuid":"s1","sessionId":"00000000-0000-0000-0000-000000000009","isMeta":true,"message":{"role":"system","content":"snapshot"}}

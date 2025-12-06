@@ -2,7 +2,9 @@
 
 ## Role
 
-You are a Senior Frontend Engineer implementing the UI skeleton for the Session Detail Core feature. Your task is to create the page template, JavaScript modules with stub functions, and TDD test cases. All functions should be stubbed (return placeholder values or throw). Tests should pass by expecting these stub behaviors.
+You are a Senior Frontend Engineer implementing the UI skeleton for the Session Detail Core feature. Your task is to create the page template, JavaScript modules with stub functions, and **TDD Red tests that expect REAL behavior**.
+
+**CRITICAL:** TDD Red means tests assert real expected behavior. Tests FAIL because stubs return placeholder values. When Phase 4 implements real logic, these same tests will PASS.
 
 ---
 
@@ -49,9 +51,9 @@ Create the complete UI skeleton:
 1. EJS page template with all DOM elements
 2. Lib module with stub functions
 3. Page module with stub orchestration
-4. TDD tests that pass with stub behaviors
+4. **TDD Red tests that assert REAL expected behavior (tests will FAIL)**
 
-**This phase does NOT implement full logic.** Functions return stub values or minimal implementations.
+**This phase does NOT implement full logic.** Functions return stub values. Tests FAIL.
 
 ---
 
@@ -174,6 +176,8 @@ app.get("/session-detail", (req, res) => {
 
 ### Step 3: Create Lib Module `public/js/lib/session-detail.js`
 
+Create stub functions that return placeholder values:
+
 ```javascript
 // Constants
 export const COLORS = {
@@ -188,35 +192,35 @@ export const DEFAULT_HEIGHT = 500;
 export const SCALE_MIN = 50;
 export const SCALE_MAX = 2000;
 
-// Stub functions - to be implemented in Phase 4
+// Stub functions - return placeholder values, will be implemented in Phase 4
 
 export function calculateBandHeight(tokens, maxTokens, containerHeight) {
-  // Stub: return 0
+  // Stub: return 0 (will fail tests expecting real calculation)
   return 0;
 }
 
 export function formatTokenCount(tokens) {
-  // Stub: return empty string
+  // Stub: return empty string (will fail tests expecting formatted output)
   return '';
 }
 
 export function truncateToolContent(content, maxLines = 2) {
-  // Stub: return content unchanged
+  // Stub: return content unchanged (will fail tests expecting truncation)
   return content;
 }
 
 export function exceedsScale(cumulative, scaleK) {
-  // Stub: return false
+  // Stub: return false (will fail tests expecting true when exceeds)
   return false;
 }
 
 export function validateScaleInput(value) {
-  // Stub: return value unchanged
+  // Stub: return value unchanged (will fail tests expecting clamping)
   return value;
 }
 
 export function validateTurnInput(value, max) {
-  // Stub: return value unchanged
+  // Stub: return value unchanged (will fail tests expecting clamping)
   return value;
 }
 ```
@@ -350,7 +354,7 @@ function hideLoading() {
 
 ### Step 5: Create Lib Test File `test/js/lib/session-detail.test.js`
 
-**Note:** Follow existing pattern in `test/js/lib/transforms.test.js`. Lib tests run in node environment.
+**CRITICAL:** These tests assert REAL expected behavior. They will FAIL because stubs return placeholder values. This is correct TDD Red.
 
 ```javascript
 import { describe, it, expect } from 'vitest';
@@ -364,70 +368,256 @@ import {
   COLORS,
   SCALE_MIN,
   SCALE_MAX,
-} from '../../public/js/lib/session-detail.js';
+  DEFAULT_WIDTH,
+  DEFAULT_HEIGHT,
+} from '../../../public/js/lib/session-detail.js';
 
-describe('session-detail lib', () => {
+// =============================================================================
+// Constants tests - These PASS (constants are defined)
+// =============================================================================
+describe('Constants', () => {
   describe('COLORS', () => {
-    it('should have all four color definitions', () => {
-      expect(COLORS.user).toBeDefined();
-      expect(COLORS.assistant).toBeDefined();
-      expect(COLORS.thinking).toBeDefined();
-      expect(COLORS.tool).toBeDefined();
+    it('has user color as blue hex', () => {
+      expect(COLORS.user).toBe('#3B82F6');
+    });
+
+    it('has assistant color as green hex', () => {
+      expect(COLORS.assistant).toBe('#22C55E');
+    });
+
+    it('has thinking color as purple hex', () => {
+      expect(COLORS.thinking).toBe('#A855F7');
+    });
+
+    it('has tool color as orange hex', () => {
+      expect(COLORS.tool).toBe('#F97316');
     });
   });
 
   describe('SCALE constants', () => {
-    it('should have min and max scale values', () => {
+    it('has SCALE_MIN as 50', () => {
       expect(SCALE_MIN).toBe(50);
+    });
+
+    it('has SCALE_MAX as 2000', () => {
       expect(SCALE_MAX).toBe(2000);
     });
   });
 
-  describe('calculateBandHeight', () => {
-    it('should return 0 (stub)', () => {
-      expect(calculateBandHeight(1000, 2000, 500)).toBe(0);
+  describe('Dimension constants', () => {
+    it('has DEFAULT_WIDTH as 800', () => {
+      expect(DEFAULT_WIDTH).toBe(800);
+    });
+
+    it('has DEFAULT_HEIGHT as 500', () => {
+      expect(DEFAULT_HEIGHT).toBe(500);
     });
   });
+});
 
-  describe('formatTokenCount', () => {
-    it('should return empty string (stub)', () => {
-      expect(formatTokenCount(1000)).toBe('');
-    });
+// =============================================================================
+// calculateBandHeight tests - WILL FAIL (stub returns 0)
+// =============================================================================
+describe('calculateBandHeight', () => {
+  it('returns 0 when tokens is 0', () => {
+    expect(calculateBandHeight(0, 100000, 500)).toBe(0);
   });
 
-  describe('truncateToolContent', () => {
-    it('should return content unchanged (stub)', () => {
-      const content = 'line1\nline2\nline3';
-      expect(truncateToolContent(content, 2)).toBe(content);
-    });
+  it('returns full height when tokens equals maxTokens', () => {
+    expect(calculateBandHeight(100000, 100000, 500)).toBe(500);
   });
 
-  describe('exceedsScale', () => {
-    it('should return false (stub)', () => {
-      expect(exceedsScale({ total: 150000 }, 100)).toBe(false);
-    });
+  it('returns half height when tokens is half of maxTokens', () => {
+    expect(calculateBandHeight(50000, 100000, 500)).toBe(250);
   });
 
-  describe('validateScaleInput', () => {
-    it('should return value unchanged (stub)', () => {
-      expect(validateScaleInput(25)).toBe(25);
-    });
+  it('returns proportional height for arbitrary values', () => {
+    // 25000 / 100000 = 0.25, 0.25 * 500 = 125
+    expect(calculateBandHeight(25000, 100000, 500)).toBe(125);
   });
 
-  describe('validateTurnInput', () => {
-    it('should return value unchanged (stub)', () => {
-      expect(validateTurnInput(50, 20)).toBe(50);
-    });
+  it('returns 0 when maxTokens is 0 (guard against division by zero)', () => {
+    expect(calculateBandHeight(1000, 0, 500)).toBe(0);
+  });
+
+  it('handles different container heights', () => {
+    expect(calculateBandHeight(50000, 100000, 400)).toBe(200);
+    expect(calculateBandHeight(50000, 100000, 600)).toBe(300);
+  });
+});
+
+// =============================================================================
+// formatTokenCount tests - WILL FAIL (stub returns empty string)
+// =============================================================================
+describe('formatTokenCount', () => {
+  it('returns raw number for values under 1000', () => {
+    expect(formatTokenCount(500)).toBe('500');
+    expect(formatTokenCount(999)).toBe('999');
+  });
+
+  it('formats thousands with k suffix', () => {
+    expect(formatTokenCount(1000)).toBe('1k');
+    expect(formatTokenCount(1500)).toBe('1.5k');
+    expect(formatTokenCount(2500)).toBe('2.5k');
+  });
+
+  it('formats tens of thousands with k suffix', () => {
+    expect(formatTokenCount(10000)).toBe('10k');
+    expect(formatTokenCount(50000)).toBe('50k');
+    expect(formatTokenCount(99500)).toBe('99.5k');
+  });
+
+  it('formats hundreds of thousands with k suffix', () => {
+    expect(formatTokenCount(100000)).toBe('100k');
+    expect(formatTokenCount(500000)).toBe('500k');
+  });
+
+  it('formats millions with M suffix', () => {
+    expect(formatTokenCount(1000000)).toBe('1M');
+    expect(formatTokenCount(1500000)).toBe('1.5M');
+  });
+
+  it('handles zero', () => {
+    expect(formatTokenCount(0)).toBe('0');
+  });
+});
+
+// =============================================================================
+// truncateToolContent tests - WILL FAIL (stub returns content unchanged)
+// =============================================================================
+describe('truncateToolContent', () => {
+  it('returns content unchanged if lines <= maxLines', () => {
+    expect(truncateToolContent('line1', 2)).toBe('line1');
+    expect(truncateToolContent('line1\nline2', 2)).toBe('line1\nline2');
+  });
+
+  it('truncates content and adds ellipsis when lines > maxLines', () => {
+    const content = 'line1\nline2\nline3\nline4';
+    expect(truncateToolContent(content, 2)).toBe('line1\nline2\n...');
+  });
+
+  it('uses default maxLines of 2', () => {
+    const content = 'line1\nline2\nline3';
+    expect(truncateToolContent(content)).toBe('line1\nline2\n...');
+  });
+
+  it('handles single line content', () => {
+    expect(truncateToolContent('single line', 2)).toBe('single line');
+  });
+
+  it('handles empty content', () => {
+    expect(truncateToolContent('', 2)).toBe('');
+  });
+
+  it('handles content with exactly maxLines', () => {
+    expect(truncateToolContent('line1\nline2', 2)).toBe('line1\nline2');
+  });
+
+  it('respects custom maxLines parameter', () => {
+    const content = 'line1\nline2\nline3\nline4\nline5';
+    expect(truncateToolContent(content, 3)).toBe('line1\nline2\nline3\n...');
+    expect(truncateToolContent(content, 4)).toBe('line1\nline2\nline3\nline4\n...');
+  });
+});
+
+// =============================================================================
+// exceedsScale tests - WILL FAIL (stub returns false)
+// =============================================================================
+describe('exceedsScale', () => {
+  it('returns false when total is under scale', () => {
+    expect(exceedsScale({ total: 50000 }, 100)).toBe(false);  // 50k < 100k
+  });
+
+  it('returns false when total equals scale', () => {
+    expect(exceedsScale({ total: 100000 }, 100)).toBe(false);  // 100k == 100k
+  });
+
+  it('returns true when total exceeds scale', () => {
+    expect(exceedsScale({ total: 150000 }, 100)).toBe(true);  // 150k > 100k
+  });
+
+  it('correctly handles edge cases near boundary', () => {
+    expect(exceedsScale({ total: 99999 }, 100)).toBe(false);
+    expect(exceedsScale({ total: 100001 }, 100)).toBe(true);
+  });
+
+  it('works with different scale values', () => {
+    expect(exceedsScale({ total: 60000 }, 50)).toBe(true);   // 60k > 50k
+    expect(exceedsScale({ total: 1500000 }, 2000)).toBe(false); // 1.5M < 2M
+  });
+});
+
+// =============================================================================
+// validateScaleInput tests - WILL FAIL (stub returns value unchanged)
+// =============================================================================
+describe('validateScaleInput', () => {
+  it('returns value unchanged when within valid range', () => {
+    expect(validateScaleInput(100)).toBe(100);
+    expect(validateScaleInput(500)).toBe(500);
+    expect(validateScaleInput(1000)).toBe(1000);
+  });
+
+  it('clamps to SCALE_MIN when value is below minimum', () => {
+    expect(validateScaleInput(0)).toBe(50);
+    expect(validateScaleInput(25)).toBe(50);
+    expect(validateScaleInput(49)).toBe(50);
+  });
+
+  it('clamps to SCALE_MAX when value is above maximum', () => {
+    expect(validateScaleInput(2001)).toBe(2000);
+    expect(validateScaleInput(3000)).toBe(2000);
+    expect(validateScaleInput(10000)).toBe(2000);
+  });
+
+  it('handles boundary values correctly', () => {
+    expect(validateScaleInput(50)).toBe(50);   // exactly SCALE_MIN
+    expect(validateScaleInput(2000)).toBe(2000); // exactly SCALE_MAX
+  });
+
+  it('handles non-numeric input by returning SCALE_MIN', () => {
+    expect(validateScaleInput(NaN)).toBe(50);
+    expect(validateScaleInput(undefined)).toBe(50);
+  });
+});
+
+// =============================================================================
+// validateTurnInput tests - WILL FAIL (stub returns value unchanged)
+// =============================================================================
+describe('validateTurnInput', () => {
+  it('returns value unchanged when within valid range', () => {
+    expect(validateTurnInput(5, 10)).toBe(5);
+    expect(validateTurnInput(0, 10)).toBe(0);
+    expect(validateTurnInput(10, 10)).toBe(10);
+  });
+
+  it('clamps to 0 when value is negative', () => {
+    expect(validateTurnInput(-1, 10)).toBe(0);
+    expect(validateTurnInput(-100, 10)).toBe(0);
+  });
+
+  it('clamps to max when value exceeds max', () => {
+    expect(validateTurnInput(15, 10)).toBe(10);
+    expect(validateTurnInput(100, 10)).toBe(10);
+  });
+
+  it('handles max of 0 (single turn session)', () => {
+    expect(validateTurnInput(0, 0)).toBe(0);
+    expect(validateTurnInput(1, 0)).toBe(0);
+  });
+
+  it('handles non-numeric input by returning 0', () => {
+    expect(validateTurnInput(NaN, 10)).toBe(0);
+    expect(validateTurnInput(undefined, 10)).toBe(0);
   });
 });
 ```
 
 ### Step 6: Create Page Test File `test/js/ui/session-detail.test.js`
 
-**Note:** Follow existing pattern in `test/js/ui/loading.test.js`. UI tests automatically use jsdom environment per vitest config.
+**Note:** UI tests verify DOM structure and initial state. These CAN pass because they test the template, not the stub functions.
 
 ```javascript
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { JSDOM } from 'jsdom';
 
 describe('session-detail page', () => {
@@ -435,7 +625,7 @@ describe('session-detail page', () => {
   let document;
 
   beforeEach(() => {
-    // Create minimal DOM
+    // Create minimal DOM matching the EJS template
     dom = new JSDOM(`
       <!DOCTYPE html>
       <html>
@@ -444,17 +634,18 @@ describe('session-detail page', () => {
         <button id="loadButton">Load</button>
         <div id="errorMessage" class="hidden"></div>
         <div id="loadingIndicator" class="hidden"></div>
-        <div id="visualizationSection" class="hidden"></div>
-        <button id="leftButton"></button>
-        <input id="turnInput" type="number" />
-        <button id="rightButton"></button>
-        <input id="turnSlider" type="range" />
-        <span id="turnLabel"></span>
-        <input id="scaleInput" type="number" />
-        <span id="scaleWarning" class="hidden"></span>
-        <div id="visualizationContainer"></div>
-        <div id="tokenStats"></div>
-        <div id="detailCard"></div>
+        <div id="visualizationSection" class="hidden">
+          <button id="leftButton"></button>
+          <input id="turnInput" type="number" min="0" value="0" />
+          <button id="rightButton"></button>
+          <input id="turnSlider" type="range" min="0" max="0" value="0" />
+          <span id="turnLabel">Turn 0 of 0</span>
+          <input id="scaleInput" type="number" min="50" max="2000" value="200" />
+          <span id="scaleWarning" class="hidden"></span>
+          <div id="visualizationContainer"></div>
+          <div id="tokenStats"></div>
+          <div id="detailCard"></div>
+        </div>
       </body>
       </html>
     `);
@@ -462,54 +653,123 @@ describe('session-detail page', () => {
     global.document = document;
   });
 
-  describe('DOM elements', () => {
-    it('should have session input', () => {
-      expect(document.getElementById('sessionInput')).not.toBeNull();
+  // =============================================================================
+  // DOM Structure tests - These PASS (testing template structure)
+  // =============================================================================
+  describe('DOM structure', () => {
+    it('has session input field', () => {
+      const input = document.getElementById('sessionInput');
+      expect(input).not.toBeNull();
+      expect(input.tagName).toBe('INPUT');
     });
 
-    it('should have load button', () => {
-      expect(document.getElementById('loadButton')).not.toBeNull();
+    it('has load button', () => {
+      const button = document.getElementById('loadButton');
+      expect(button).not.toBeNull();
+      expect(button.tagName).toBe('BUTTON');
     });
 
-    it('should have navigation controls', () => {
+    it('has error message container', () => {
+      expect(document.getElementById('errorMessage')).not.toBeNull();
+    });
+
+    it('has loading indicator', () => {
+      expect(document.getElementById('loadingIndicator')).not.toBeNull();
+    });
+
+    it('has visualization section', () => {
+      expect(document.getElementById('visualizationSection')).not.toBeNull();
+    });
+
+    it('has all navigation controls', () => {
       expect(document.getElementById('leftButton')).not.toBeNull();
       expect(document.getElementById('turnInput')).not.toBeNull();
       expect(document.getElementById('rightButton')).not.toBeNull();
       expect(document.getElementById('turnSlider')).not.toBeNull();
+      expect(document.getElementById('turnLabel')).not.toBeNull();
     });
 
-    it('should have scale input', () => {
+    it('has scale controls', () => {
       expect(document.getElementById('scaleInput')).not.toBeNull();
+      expect(document.getElementById('scaleWarning')).not.toBeNull();
     });
 
-    it('should have visualization container', () => {
+    it('has visualization container', () => {
       expect(document.getElementById('visualizationContainer')).not.toBeNull();
     });
 
-    it('should have detail card', () => {
+    it('has token stats display', () => {
+      expect(document.getElementById('tokenStats')).not.toBeNull();
+    });
+
+    it('has detail card', () => {
       expect(document.getElementById('detailCard')).not.toBeNull();
     });
   });
 
+  // =============================================================================
+  // Initial State tests - These PASS (testing initial class states)
+  // =============================================================================
   describe('initial state', () => {
-    it('should have visualization section hidden', () => {
+    it('has visualization section hidden initially', () => {
       const section = document.getElementById('visualizationSection');
       expect(section.classList.contains('hidden')).toBe(true);
     });
 
-    it('should have error message hidden', () => {
+    it('has error message hidden initially', () => {
       const error = document.getElementById('errorMessage');
       expect(error.classList.contains('hidden')).toBe(true);
     });
 
-    it('should have scale warning hidden', () => {
+    it('has loading indicator hidden initially', () => {
+      const loading = document.getElementById('loadingIndicator');
+      expect(loading.classList.contains('hidden')).toBe(true);
+    });
+
+    it('has scale warning hidden initially', () => {
       const warning = document.getElementById('scaleWarning');
       expect(warning.classList.contains('hidden')).toBe(true);
     });
 
-    it('should have loading indicator hidden', () => {
-      const loading = document.getElementById('loadingIndicator');
-      expect(loading.classList.contains('hidden')).toBe(true);
+    it('has turn input starting at 0', () => {
+      const turnInput = document.getElementById('turnInput');
+      expect(turnInput.value).toBe('0');
+    });
+
+    it('has scale input starting at 200', () => {
+      const scaleInput = document.getElementById('scaleInput');
+      expect(scaleInput.value).toBe('200');
+    });
+
+    it('has turn slider starting at 0', () => {
+      const slider = document.getElementById('turnSlider');
+      expect(slider.value).toBe('0');
+    });
+
+    it('has turn label showing "Turn 0 of 0"', () => {
+      const label = document.getElementById('turnLabel');
+      expect(label.textContent).toBe('Turn 0 of 0');
+    });
+  });
+
+  // =============================================================================
+  // Input constraints tests - These PASS (testing HTML attributes)
+  // =============================================================================
+  describe('input constraints', () => {
+    it('turn input has min of 0', () => {
+      const turnInput = document.getElementById('turnInput');
+      expect(turnInput.getAttribute('min')).toBe('0');
+    });
+
+    it('scale input has min of 50 and max of 2000', () => {
+      const scaleInput = document.getElementById('scaleInput');
+      expect(scaleInput.getAttribute('min')).toBe('50');
+      expect(scaleInput.getAttribute('max')).toBe('2000');
+    });
+
+    it('turn slider has min of 0', () => {
+      const slider = document.getElementById('turnSlider');
+      expect(slider.getAttribute('min')).toBe('0');
     });
   });
 });
@@ -518,31 +778,15 @@ describe('session-detail page', () => {
 ### Step 7: D3 Testing Strategy
 
 D3 is loaded via CDN in the browser. For tests:
-- **Lib tests** (`test/js/lib/`): Don't need D3 - pure functions only
-- **UI tests** (`test/js/ui/`): Test DOM structure, not D3 rendering
+- **Lib tests** (`test/js/lib/`): Test pure functions only - no D3 needed
+- **UI tests** (`test/js/ui/`): Test DOM structure - no D3 rendering
 - D3 visualization testing is deferred to Phase 5 manual testing
-
-For UI tests, verify:
-- Container element exists
-- Correct classes/attributes set
-- Don't test actual SVG rendering in jsdom
-
-### Step 8: Vitest Config Verification
-
-The existing `vitest.config.ts` already includes the correct patterns:
-```typescript
-test: {
-  include: ['test/**/*.test.{ts,js}'],
-  // ...
-}
-```
 
 ### Step 8: Verify
 
 - Run `npm run typecheck` - should pass
-- Run `npm test` - all tests should pass
+- Run `npm test` - **lib behavior tests FAIL, DOM structure tests pass**
 - Navigate to `/session-detail` - page should load
-- Click Load - should log to console (stub behavior)
 
 ---
 
@@ -559,9 +803,10 @@ test: {
 - Follow existing patterns in `public/js/`
 
 ### Testing
-- Use Vitest with jsdom for DOM tests
-- Test stub behaviors (return values, not logic)
-- Group tests with `describe()`
+- Use Vitest with describe/it pattern
+- Lib tests assert REAL expected behavior (will FAIL)
+- UI tests verify DOM structure (will PASS)
+- This is correct TDD Red for lib layer
 
 ---
 
@@ -571,12 +816,38 @@ test: {
 - [ ] Page route added to `src/server.ts`
 - [ ] Lib module created: `public/js/lib/session-detail.js` with stub functions
 - [ ] Page module created: `public/js/pages/session-detail.js` with stub handlers
-- [ ] Lib test file created: `test/js/lib/session-detail.test.js`
-- [ ] Page test file created: `test/js/ui/session-detail.test.js`
+- [ ] Lib test file created: `test/js/lib/session-detail.test.js` with behavior assertions
+- [ ] Page test file created: `test/js/ui/session-detail.test.js` with DOM tests
 - [ ] TypeScript compiles (backend)
-- [ ] All tests pass (stub behaviors)
+- [ ] DOM structure tests pass
+- [ ] **Lib behavior tests FAIL** (stubs return placeholder values) - THIS IS CORRECT
 - [ ] Page loads at `/session-detail`
 - [ ] All DOM elements present and accessible
+
+---
+
+## Verification
+
+```bash
+npm run typecheck   # Should pass
+npm test            # Lib behavior tests FAIL, DOM tests pass
+```
+
+**Expected test results:**
+| Test Category | Expected Result |
+|---------------|-----------------|
+| Existing tests | PASS |
+| Constants tests | PASS |
+| DOM structure tests | PASS |
+| Initial state tests | PASS |
+| calculateBandHeight tests | FAIL (stub returns 0) |
+| formatTokenCount tests | FAIL (stub returns '') |
+| truncateToolContent tests | FAIL (stub returns unchanged) |
+| exceedsScale tests | FAIL (stub returns false) |
+| validateScaleInput tests | FAIL (stub returns unchanged) |
+| validateTurnInput tests | FAIL (stub returns unchanged) |
+
+This is correct TDD Red: comprehensive behavior tests written, lib tests failing, DOM tests passing.
 
 ---
 
@@ -596,28 +867,24 @@ Upon completion, provide a report in this format:
 
 ## Files Modified
 - [ ] `src/server.ts` (added page route)
-- [ ] `vitest.config.ts` (if needed)
+
+## Test Results
+- Existing tests: X passing
+- New DOM structure tests: X passing
+- New lib behavior tests: X failing (stub returns) - EXPECTED
 
 ## Definition of Done Checklist
-- [ ] EJS template created with all DOM elements
+- [ ] EJS template created
 - [ ] Page route added
-- [ ] Lib module created with X stub functions
-- [ ] Page module created with X stub handlers
-- [ ] Lib tests: X tests, all passing
-- [ ] Page tests: X tests, all passing
+- [ ] Lib stubs created
+- [ ] Page stubs created
+- [ ] Comprehensive lib behavior tests written
+- [ ] DOM structure tests written
 - [ ] TypeScript compiles
-- [ ] Page loads at /session-detail
-- [ ] All DOM elements verified
-
-## Standards Adherence
-- [ ] Tailwind CSS used for styling
-- [ ] ES Modules pattern followed
-- [ ] Tests use describe/it pattern
-- [ ] Follows existing frontend architecture
-
-## Implementation Notes
-[Any notes about implementation decisions, challenges, or deviations]
+- [ ] DOM tests pass
+- [ ] Lib behavior tests FAIL (correct TDD Red)
+- [ ] Page loads
 
 ## Feedback & Recommendations
-[Observations about the app, phase spec, feature design, or general recommendations based on what was encountered during implementation]
+[Observations about the app, phase spec, feature design]
 ```

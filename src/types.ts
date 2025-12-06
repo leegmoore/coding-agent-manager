@@ -76,3 +76,49 @@ export interface CompressionConfig {
   targetHeavy: number;
   targetStandard: number;
 }
+
+/**
+ * Token counts grouped by message type.
+ */
+export interface TokensByType {
+  user: number;
+  assistant: number;
+  thinking: number;
+  tool: number;
+  total: number;
+}
+
+/**
+ * Tool content within an assistant message.
+ */
+export interface ToolBlock {
+  name: string;
+  content: string;
+}
+
+/**
+ * Structured content for a single turn.
+ */
+export interface TurnContent {
+  userPrompt: string;
+  toolBlocks: ToolBlock[];
+  assistantResponse: string;
+}
+
+/**
+ * Turn data with cumulative token statistics.
+ */
+export interface TurnData {
+  turnIndex: number;
+  cumulative: TokensByType;
+  content: TurnContent;
+}
+
+/**
+ * Response payload for session turns endpoint.
+ */
+export interface SessionTurnsResponse {
+  sessionId: string;
+  totalTurns: number;
+  turns: TurnData[];
+}

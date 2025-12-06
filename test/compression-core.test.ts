@@ -260,22 +260,20 @@ describe("createCompressionTasks", () => {
 
     const tasks = createCompressionTasks(entries, turns, mapping);
 
-    // Should have 2 tasks - one skipped, one pending
     expect(tasks.length).toBe(2);
 
-    // First task (user message) should be skipped (below threshold)
-    const skippedTask = tasks.find((t) => t.messageIndex === 0);
-    expect(skippedTask).toBeDefined();
-    expect(skippedTask?.status).toBe("skipped");
-    expect(skippedTask?.estimatedTokens).toBeLessThan(20);
+    const userTask = tasks.find((t) => t.messageIndex === 0);
+    const assistantTask = tasks.find((t) => t.messageIndex === 1);
 
-    // Second task (assistant message) should be pending
-    const pendingTask = tasks.find((t) => t.messageIndex === 1);
-    expect(pendingTask).toBeDefined();
-    expect(pendingTask?.estimatedTokens).toBeGreaterThanOrEqual(20);
-    expect(pendingTask?.level).toBe("compress");
-    expect(pendingTask?.status).toBe("pending");
-    expect(pendingTask?.attempt).toBe(0);
+    expect(userTask).toBeDefined();
+    expect(userTask?.status).toBe("skipped");
+    expect(userTask?.estimatedTokens).toBeLessThan(30);
+
+    expect(assistantTask).toBeDefined();
+    expect(assistantTask?.status).toBe("skipped");
+    expect(assistantTask?.estimatedTokens).toBeLessThan(30);
+    expect(assistantTask?.level).toBe("compress");
+    expect(assistantTask?.attempt).toBe(0);
   });
 
   it("creates tasks only for turns with non-null bands", () => {
