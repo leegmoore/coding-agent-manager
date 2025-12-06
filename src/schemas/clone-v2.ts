@@ -36,6 +36,7 @@ export const CompressionStatsSchema = z.object({
 export const CloneResponseSchemaV2 = z.object({
   success: z.boolean(),
   outputPath: z.string(),
+  debugLogPath: z.string().optional(),
   stats: z.object({
     originalTurnCount: z.number(),
     outputTurnCount: z.number(),

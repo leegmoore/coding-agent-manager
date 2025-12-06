@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session Visualizer - Claude Code</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="bg-gray-100 min-h-screen py-8">
+  <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
+    <div class="mb-6">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">Session Visualizer</h1>
+      <p class="text-gray-600">Visualize Claude Code session context as a sequential stack</p>
+    </div>
+
+    <form id="visualize-form" class="space-y-6">
+      <div>
+        <label for="sessionId" class="block text-sm font-medium text-gray-700 mb-2">
+          Session GUID
+        </label>
+        <div class="flex gap-4">
+          <input
+            type="text"
+            id="sessionId"
+            name="sessionId"
+            required
+            pattern="[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+            placeholder="e.g., 84e0d3f1-f2ee-4560-87da-05ae7f33a6f0"
+            class="flex-1 border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          <button
+            type="button"
+            id="submit-btn"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            Visualize
+          </button>
+        </div>
+        <p class="mt-1 text-sm text-gray-500">Paste the session UUID from Claude Code</p>
+      </div>
+    </form>
+
+    <!-- Legend -->
+    <div class="mt-6 p-4 bg-gray-50 rounded-md">
+      <h3 class="text-sm font-medium text-gray-700 mb-3">Legend</h3>
+      <div class="flex flex-wrap gap-6">
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-4 h-4 rounded" style="background-color: #3B82F6"></span>
+          <span class="text-sm text-gray-600">User</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-4 h-4 rounded" style="background-color: #22C55E"></span>
+          <span class="text-sm text-gray-600">Assistant</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-4 h-4 rounded" style="background-color: #F97316"></span>
+          <span class="text-sm text-gray-600">Tool</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-4 h-4 rounded" style="background-color: #A855F7"></span>
+          <span class="text-sm text-gray-600">Thinking</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="loading" class="hidden mt-6 text-center py-12">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
+      <p class="mt-4 text-lg font-medium text-gray-700">Loading session structure...</p>
+    </div>
+
+    <!-- Stats panel -->
+    <div id="stats-panel" class="hidden mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+      <h3 class="text-sm font-medium text-blue-900 mb-2">Session Statistics</h3>
+      <div id="stats-content"></div>
+    </div>
+
+    <!-- Visualization container -->
+    <div id="visualization" class="hidden mt-6">
+      <h3 class="text-sm font-medium text-gray-700 mb-3">Context Stack</h3>
+      <div class="border border-gray-200 rounded-md p-4 bg-gray-50 overflow-x-auto">
+        <div id="viz-container" class="w-full" style="min-height: 100px;"></div>
+      </div>
+      <p class="mt-2 text-xs text-gray-500">Width proportional to token count. Hover for details.</p>
+    </div>
+
+    <!-- Error result -->
+    <div id="error-result" class="hidden mt-6 p-4 bg-red-50 border border-red-200 rounded-md">
+      <h3 class="text-lg font-semibold text-red-900 mb-2">Error</h3>
+      <p id="error-message" class="text-sm text-red-700"></p>
+    </div>
+
+    <!-- Navigation -->
+    <div class="mt-8 pt-6 border-t border-gray-200">
+      <a href="/" class="text-blue-600 hover:text-blue-800 text-sm">
+        &larr; Back to Session Cloner
+      </a>
+    </div>
+  </div>
+
+  <script type="module" src="/js/pages/visualize.js"></script>
+</body>
+</html>

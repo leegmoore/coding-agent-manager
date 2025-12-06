@@ -29,7 +29,7 @@ export function loadCompressionConfig(): CompressionConfig {
       10
     ),
     maxAttempts: parseInt(process.env.COMPRESSION_MAX_ATTEMPTS || "4", 10),
-    minTokens: parseInt(process.env.COMPRESSION_MIN_TOKENS || "20", 10),
+    minTokens: parseInt(process.env.COMPRESSION_MIN_TOKENS || "30", 10),
     thinkingThreshold: parseInt(
       process.env.COMPRESSION_THINKING_THRESHOLD || "1000",
       10

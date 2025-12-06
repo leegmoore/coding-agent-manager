@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import {
   processBatches,
   compressWithTimeout,
-  calculateTimeout,
+  calculateRetryTimeout,
 } from "../src/services/compression-batch.js";
 import type { CompressionTask, CompressionConfig } from "../src/types.js";
 
@@ -40,34 +40,35 @@ const defaultConfig: CompressionConfig = {
   targetStandard: 50,
 };
 
-describe("calculateTimeout", () => {
-  it("returns initial timeout for attempt 0", () => {
-    const result = calculateTimeout(0, defaultConfig);
-    expect(result).toBe(5000);
+describe("calculateRetryTimeout", () => {
+  it("returns 1.5x for attempt 1", () => {
+    const result = calculateRetryTimeout(20000, 1);
+    expect(result).toBe(30000); // 20000 * 1.5
   });
 
-  it("returns initial + increment for attempt 1", () => {
-    const result = calculateTimeout(1, defaultConfig);
-    expect(result).toBe(10000);
+  it("returns 2x for attempt 2", () => {
+    const result = calculateRetryTimeout(20000, 2);
+    expect(result).toBe(40000); // 20000 * 2
   });
 
-  it("returns initial + 2*increment for attempt 2", () => {
-    const result = calculateTimeout(2, defaultConfig);
-    expect(result).toBe(15000);
+  it("returns 2.5x for attempt 3", () => {
+    const result = calculateRetryTimeout(20000, 3);
+    expect(result).toBe(50000); // 20000 * 2.5
   });
 
-  it("caps at maxTimeout for attempt 3+", () => {
-    // maxTimeout = timeoutInitial + 2 * timeoutIncrement = 5000 + 10000 = 15000
-    const result = calculateTimeout(3, defaultConfig);
-    expect(result).toBe(15000);
+  it("caps at 3x for attempt 4+", () => {
+    // maxMultiplier = 3
+    const result4 = calculateRetryTimeout(20000, 4);
+    expect(result4).toBe(60000); // 20000 * 3 (capped)
 
-    const result4 = calculateTimeout(4, defaultConfig);
-    expect(result4).toBe(15000);
+    const result5 = calculateRetryTimeout(20000, 5);
+    expect(result5).toBe(60000); // still capped at 3x
   });
 
   it("increases timeout on each retry (progression test)", () => {
-    const timeouts = [0, 1, 2, 3].map((attempt) => calculateTimeout(attempt, defaultConfig));
-    expect(timeouts).toEqual([5000, 10000, 15000, 15000]);
+    const baseTimeout = 20000;
+    const timeouts = [1, 2, 3, 4].map((attempt) => calculateRetryTimeout(baseTimeout, attempt));
+    expect(timeouts).toEqual([30000, 40000, 50000, 60000]); // 1.5x, 2x, 2.5x, 3x
   });
 });
 

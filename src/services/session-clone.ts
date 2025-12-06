@@ -373,6 +373,7 @@ export async function cloneSessionV2(
   let compressionStats: CompressionStats | undefined;
   let compressionTasks: CompressionTask[] = [];
   let originalEntries: SessionEntry[] | undefined;
+  let debugLogPath: string | undefined;
 
   // 3. Apply compression if specified (BEFORE tool removal for accurate stats)
   if (request.compressionBands && request.compressionBands.length > 0) {
@@ -443,6 +444,7 @@ export async function cloneSessionV2(
   if (request.debugLog && originalEntries && compressionTasks.length > 0) {
     try {
       const debugLogDir = path.join(process.cwd(), "clone-debug-log");
+      const debugLogFilename = `${newSessionId}-compression-debug.md`;
       await writeCompressionDebugLog(
         request.sessionId,
         newSessionId,
@@ -453,6 +455,7 @@ export async function cloneSessionV2(
         compressionTasks,
         debugLogDir
       );
+      debugLogPath = `/clone-debug-log/${debugLogFilename}`;
     } catch (error) {
       // Don't fail clone if debug log fails
       console.error(`[debug] Failed to write compression debug log:`, error);
@@ -463,6 +466,7 @@ export async function cloneSessionV2(
   return {
     success: true,
     outputPath,
+    debugLogPath,
     stats: {
       originalTurnCount,
       outputTurnCount,

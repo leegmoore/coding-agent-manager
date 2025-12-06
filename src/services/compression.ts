@@ -9,7 +9,7 @@ import type {
   ContentBlock,
 } from "../types.js";
 import { processBatches, type BatchConfig } from "./compression-batch.js";
-import { OpenRouterClient } from "./openrouter-client.js";
+import { getProvider } from "../providers/index.js";
 
 /**
  * Estimate token count using chars/4 heuristic.
@@ -129,15 +129,31 @@ export function mapTurnsToBands(
 }
 
 /**
+ * Calculate initial timeout based on estimated tokens.
+ * - Default: 20 seconds
+ * - 1000+ tokens: 30 seconds
+ * - 4000+ tokens: 90 seconds
+ */
+function calculateInitialTimeout(estimatedTokens: number): number {
+  if (estimatedTokens >= 4000) {
+    return 90000;
+  }
+  if (estimatedTokens >= 1000) {
+    return 30000;
+  }
+  return 20000;
+}
+
+/**
  * Create compression tasks for messages in turns that have compression bands.
- * Messages below the minimum token threshold (default 20) get status "skipped".
+ * Messages below the minimum token threshold (default 30) get status "skipped".
  * Only creates tasks for user and assistant message types.
  */
 export function createCompressionTasks(
   entries: SessionEntry[],
   turns: Turn[],
   mapping: TurnBandMapping[],
-  minTokens: number = 20
+  minTokens: number = 30
 ): CompressionTask[] {
   const tasks: CompressionTask[] = [];
 
@@ -171,7 +187,7 @@ export function createCompressionTasks(
         level: turnMapping.band.level,
         estimatedTokens: tokenCount,
         attempt: 0,
-        timeoutMs: 5000,
+        timeoutMs: calculateInitialTimeout(tokenCount),
         status: isSkipped ? "skipped" : "pending",
       };
 
@@ -297,12 +313,8 @@ export async function compressMessages(
     };
   }
 
-  // Initialize client
-  const client = new OpenRouterClient({
-    apiKey: process.env.OPENROUTER_API_KEY || "",
-    model: process.env.OPENROUTER_MODEL || "google/gemini-2.5-flash",
-    modelLarge: process.env.OPENROUTER_MODEL_LARGE || "anthropic/claude-opus-4.5",
-  });
+  // Get provider from factory
+  const provider = getProvider();
 
   // Process via batch processor (only pending tasks)
   const batchConfig: BatchConfig = {
@@ -310,7 +322,7 @@ export async function compressMessages(
     maxAttempts: config.maxAttempts,
   };
 
-  const completedTasks = await processBatches(pendingTasks, client, batchConfig, config);
+  const completedTasks = await processBatches(pendingTasks, provider, batchConfig);
 
   // Combine completed tasks with skipped tasks for full task list
   const allCompletedTasks = [...completedTasks, ...skippedTasks];

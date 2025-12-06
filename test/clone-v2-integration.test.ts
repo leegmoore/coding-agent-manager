@@ -33,10 +33,10 @@ vi.mock("os", () => ({
   homedir: () => "/mock/home",
 }));
 
-// Mock OpenRouterClient to return 35% of input text
+// Mock provider factory to return a mock provider
 // The compress method takes (text, level, useLargeModel) parameters
-vi.mock("../src/services/openrouter-client.js", () => ({
-  OpenRouterClient: class {
+vi.mock("../src/providers/index.js", () => ({
+  getProvider: () => ({
     compress(
       text: string,
       _level: string,
@@ -45,8 +45,9 @@ vi.mock("../src/services/openrouter-client.js", () => ({
       // Return exactly 35% of chars -> 35% of tokens (since tokens = ceil(chars/4))
       const targetChars = Math.floor(text.length * 0.35);
       return Promise.resolve(text.substring(0, targetChars));
-    }
-  },
+    },
+  }),
+  resetProvider: () => {},
 }));
 
 describe("Clone V2 Integration Tests", () => {

@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Session Cloner - Claude Code</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body class="bg-gray-100 min-h-screen py-8">
   <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
@@ -66,6 +68,57 @@
         </div>
       </div>
 
+      <!-- Compression Bands -->
+      <div class="border-t border-gray-200 pt-6 mt-6">
+        <h3 class="text-sm font-medium text-gray-700 mb-4">Compression Bands (optional)</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="band1" class="block text-sm text-gray-600 mb-1">
+              Band 1 ends at (heavy-compress)
+            </label>
+            <div class="flex items-center">
+              <input
+                type="number"
+                id="band1"
+                name="band1"
+                min="1"
+                max="99"
+                placeholder="e.g., 35"
+                class="w-24 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span class="ml-2 text-gray-500">%</span>
+            </div>
+          </div>
+          <div>
+            <label for="band2" class="block text-sm text-gray-600 mb-1">
+              Band 2 ends at (compress)
+            </label>
+            <div class="flex items-center">
+              <input
+                type="number"
+                id="band2"
+                name="band2"
+                min="1"
+                max="100"
+                placeholder="e.g., 75"
+                class="w-24 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <span class="ml-2 text-gray-500">%</span>
+            </div>
+          </div>
+        </div>
+        <p id="band-preview" class="mt-2 text-sm text-gray-500">No compression</p>
+        <p id="band-errors" class="mt-1 text-sm text-red-600 hidden"></p>
+      </div>
+
+      <!-- Debug Log Option -->
+      <div class="mt-4">
+        <label class="flex items-center">
+          <input type="checkbox" id="debugLog" name="debugLog" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+          <span class="ml-2 text-sm text-gray-700">Generate debug log</span>
+        </label>
+      </div>
+
       <button
         type="button"
         id="submit-btn"
@@ -76,9 +129,8 @@
     </form>
 
     <!-- Loading indicator -->
-    <div id="loading" class="hidden mt-6 text-center">
-      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      <p class="mt-2 text-gray-600">Cloning session...</p>
+    <div id="loading" class="hidden mt-6 text-center text-lg font-medium text-gray-700">
+      <!-- Content set by JavaScript -->
     </div>
 
     <!-- Success result -->
@@ -91,6 +143,17 @@
       <div class="mb-4">
         <p class="text-sm text-gray-700 mb-2"><strong>Stats:</strong></p>
         <ul id="stats-list" class="text-sm text-gray-600 space-y-1"></ul>
+      </div>
+      <!-- Compression Stats (shown when compression used) -->
+      <div id="compression-stats" class="hidden mt-4 pt-4 border-t border-gray-200">
+        <p class="text-sm text-gray-700 mb-2"><strong>Compression:</strong></p>
+        <ul id="compression-stats-list" class="text-sm text-gray-600 space-y-1"></ul>
+      </div>
+      <!-- Debug Log Link (shown when debug enabled) -->
+      <div id="debug-log-link" class="hidden mt-4">
+        <a id="debug-log-anchor" href="#" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm">
+          View Debug Log →
+        </a>
       </div>
       <div>
         <p class="text-sm text-gray-700 mb-2"><strong>Resume command:</strong></p>
@@ -113,7 +176,6 @@
     </div>
   </div>
 
-  <script src="/js/clone.js?v=3"></script>
+  <script type="module" src="/js/pages/clone.js"></script>
 </body>
 </html>
-

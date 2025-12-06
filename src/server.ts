@@ -11,6 +11,7 @@ dotenv.config({ path: path.join(__dirname, "../.env") });
 import express from "express";
 import { cloneRouter } from "./routes/clone.js";
 import { cloneRouterV2 } from "./routes/clone-v2.js";
+import { sessionStructureRouter } from "./routes/session-structure.js";
 import { config } from "./config.js";
 
 const app = express();
@@ -19,6 +20,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "../public")));
+app.use('/clone-debug-log', express.static(path.join(__dirname, '../clone-debug-log')));
 
 // View engine
 app.set("view engine", "ejs");
@@ -32,10 +34,15 @@ app.get("/health", (req, res) => {
 // API routes
 app.use("/api", cloneRouter);
 app.use("/api/v2", cloneRouterV2);
+app.use("/api", sessionStructureRouter);
 
 // Server-rendered pages
 app.get("/", (req, res) => {
   res.render("pages/clone");
+});
+
+app.get("/visualize", (req, res) => {
+  res.render("pages/visualize");
 });
 
 export { app };

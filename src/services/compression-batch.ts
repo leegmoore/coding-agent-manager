@@ -1,5 +1,5 @@
-import type { CompressionTask, CompressionConfig } from "../types.js";
-import type { OpenRouterClient } from "./openrouter-client.js";
+import type { CompressionTask } from "../types.js";
+import type { LlmProvider } from "../providers/types.js";
 
 export interface BatchConfig {
   concurrency: number;
@@ -7,14 +7,13 @@ export interface BatchConfig {
 }
 
 /**
- * Calculate timeout for a given attempt number.
- * Formula: timeoutInitial + attempt * timeoutIncrement
- * Capped at maxTimeout = timeoutInitial + 2 * timeoutIncrement
+ * Calculate retry timeout based on current timeout.
+ * Adds 50% on each retry, capped at 3x original.
  */
-export function calculateTimeout(attempt: number, config: CompressionConfig): number {
-  const maxTimeout = config.timeoutInitial + 2 * config.timeoutIncrement;
-  const calculated = config.timeoutInitial + attempt * config.timeoutIncrement;
-  return Math.min(calculated, maxTimeout);
+export function calculateRetryTimeout(currentTimeout: number, attempt: number): number {
+  const multiplier = 1 + (attempt * 0.5); // 1.5x, 2x, 2.5x, 3x...
+  const maxMultiplier = 3;
+  return Math.round(currentTimeout * Math.min(multiplier, maxMultiplier));
 }
 
 /**
@@ -23,7 +22,7 @@ export function calculateTimeout(attempt: number, config: CompressionConfig): nu
  */
 export async function compressWithTimeout(
   task: CompressionTask,
-  client: OpenRouterClient | { compress: (text: string, level: string, useLargeModel: boolean) => Promise<string> }
+  client: LlmProvider
 ): Promise<CompressionTask> {
   const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(() => reject(new Error("Compression timeout")), task.timeoutMs);
@@ -62,9 +61,8 @@ export async function compressWithTimeout(
  */
 export async function processBatches(
   tasks: CompressionTask[],
-  client: OpenRouterClient | { compress: (text: string, level: string, useLargeModel: boolean) => Promise<string> },
-  config: BatchConfig,
-  compressionConfig: CompressionConfig
+  client: LlmProvider,
+  config: BatchConfig
 ): Promise<CompressionTask[]> {
   // Handle empty task list
   if (tasks.length === 0) {
@@ -92,11 +90,11 @@ export async function processBatches(
         const nextAttempt = result.attempt + 1;
 
         if (nextAttempt < config.maxAttempts) {
-          // Retry with increased timeout
+          // Retry with increased timeout (50% more each retry, capped at 3x)
           pending.push({
             ...result,
             attempt: nextAttempt,
-            timeoutMs: calculateTimeout(nextAttempt, compressionConfig),
+            timeoutMs: calculateRetryTimeout(result.timeoutMs, nextAttempt),
             status: "pending",
             error: undefined,
           });
