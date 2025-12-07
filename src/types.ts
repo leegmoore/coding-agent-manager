@@ -102,6 +102,8 @@ export interface ToolBlock {
 export interface TurnContent {
   userPrompt: string;
   toolBlocks: ToolBlock[];
+  toolResults?: ToolBlock[];
+  thinking?: string;
   assistantResponse: string;
 }
 

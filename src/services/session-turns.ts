@@ -56,7 +56,10 @@ export function calculateCumulativeTokens(
       // Array content
       if (Array.isArray(content)) {
         for (const block of content) {
-          const bucket = classifyBlock(block as ContentBlock);
+          // Skip images entirely for token accounting
+          if (block.type === "image") {
+            continue;
+          }
 
           const text =
             typeof (block as any).text === "string"
@@ -68,6 +71,14 @@ export function calculateCumulativeTokens(
                   : JSON.stringify(block);
 
           const tokens = estimateTokens(text);
+
+          // Force tool_result / tool_use into tool bucket even if entry.type is "user"
+          if (block.type === "tool_result" || block.type === "tool_use") {
+            result.tool += tokens;
+            continue;
+          }
+
+          const bucket = classifyBlock(block as ContentBlock);
 
           if (bucket === "thinking") {
             result.thinking += tokens;
@@ -93,6 +104,8 @@ export function extractTurnContent(entries: SessionEntry[], turn: Turn): TurnCon
   let userPrompt = "";
   let assistantResponse = "";
   const toolBlocks: TurnContent["toolBlocks"] = [];
+  const toolResults: TurnContent["toolResults"] = [];
+  let thinking = "";
 
   for (let idx = turn.startIndex; idx <= turn.endIndex; idx++) {
     const entry = entries[idx];
@@ -100,17 +113,21 @@ export function extractTurnContent(entries: SessionEntry[], turn: Turn): TurnCon
 
     const content = entry.message.content;
 
+    // Collect user prompt text (first user message)
     if (entry.type === "user") {
-      if (typeof content === "string") {
-        if (!userPrompt) {
-          userPrompt = content;
-        }
+      if (typeof content === "string" && !userPrompt) {
+        userPrompt = content;
       } else if (Array.isArray(content)) {
-        const texts = content
-          .filter((b) => b.type === "text" && typeof (b as any).text === "string")
-          .map((b) => (b as any).text as string);
-        if (texts.length > 0 && !userPrompt) {
-          userPrompt = texts.join("\n");
+        for (const block of content) {
+          if (block.type === "text" && typeof (block as any).text === "string" && !userPrompt) {
+            userPrompt = (block as any).text;
+          }
+          if (block.type === "tool_result") {
+            toolResults.push({
+              name: (block as any).tool_use_id ?? "tool result",
+              content: stringifyBlockContent(block),
+            });
+          }
         }
       }
       continue;
@@ -118,7 +135,7 @@ export function extractTurnContent(entries: SessionEntry[], turn: Turn): TurnCon
 
     if (entry.type === "assistant") {
       if (typeof content === "string") {
-        assistantResponse = content;
+        assistantResponse = assistantResponse ? `${assistantResponse}\n${content}` : content;
         continue;
       }
 
@@ -127,8 +144,15 @@ export function extractTurnContent(entries: SessionEntry[], turn: Turn): TurnCon
           if (block.type === "tool_use") {
             toolBlocks.push({
               name: (block as any).name ?? "tool",
-              content: JSON.stringify((block as any).input ?? {}),
+              content: JSON.stringify((block as any).input ?? (block as any).content ?? {}),
             });
+          } else if (block.type === "tool_result") {
+            toolResults.push({
+              name: (block as any).tool_use_id ?? "tool result",
+              content: stringifyBlockContent(block),
+            });
+          } else if (block.type === "thinking" && typeof (block as any).thinking === "string") {
+            thinking = thinking ? `${thinking}\n${(block as any).thinking}` : (block as any).thinking;
           } else if (block.type === "text" && typeof (block as any).text === "string") {
             assistantResponse = assistantResponse
               ? `${assistantResponse}\n${(block as any).text}`
@@ -139,7 +163,14 @@ export function extractTurnContent(entries: SessionEntry[], turn: Turn): TurnCon
     }
   }
 
-  return { userPrompt, toolBlocks, assistantResponse };
+  return { userPrompt, toolBlocks, toolResults, thinking, assistantResponse };
+}
+
+function stringifyBlockContent(block: ContentBlock): string {
+  if (typeof (block as any).content === "string") return (block as any).content;
+  if (typeof (block as any).text === "string") return (block as any).text;
+  if (typeof (block as any).thinking === "string") return (block as any).thinking;
+  return JSON.stringify(block);
 }
 
 export async function getSessionTurns(sessionId: string): Promise<SessionTurnsResponse> {

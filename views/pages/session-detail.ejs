@@ -8,7 +8,7 @@
   <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body class="bg-gray-100 min-h-screen p-8">
-  <div class="max-w-4xl mx-auto">
+  <div class="max-w-6xl mx-auto">
     <h1 class="text-2xl font-bold mb-6">Session Detail</h1>
 
     <!-- Session Input -->
@@ -32,14 +32,14 @@
           <button id="leftButton" aria-label="Previous turn" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">
             ←
           </button>
-          <input type="number" id="turnInput" aria-label="Turn input" min="0" value="0"
+          <input type="number" id="turnInput" aria-label="Turn input" min="1" value="1"
                  class="w-20 px-2 py-1 border rounded text-center">
           <button id="rightButton" aria-label="Next turn" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">
             →
           </button>
           <span id="turnLabel" class="text-gray-600">Turn 0 of 0</span>
         </div>
-        <input type="range" id="turnSlider" aria-label="Turn slider" min="0" max="0" value="0" class="w-full">
+        <input type="range" id="turnSlider" aria-label="Turn slider" min="1" max="1" value="1" class="w-full">
       </div>
 
       <!-- Scale Control -->
@@ -62,10 +62,19 @@
           <span class="flex items-center gap-1"><span class="w-4 h-4 bg-purple-500 inline-block"></span> Thinking</span>
           <span class="flex items-center gap-1"><span class="w-4 h-4 bg-orange-500 inline-block"></span> Tool</span>
         </div>
-        <div id="visualizationContainer" class="border rounded" style="width: 800px; height: 500px;">
-          <!-- D3 renders here -->
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <div id="visualizationContainer" class="border rounded" style="width: 100%; height: auto;">
+              <!-- D3 renders here -->
+            </div>
+            <div id="tokenStats" class="mt-2 text-sm text-gray-600"></div>
+          </div>
+          <div class="w-[320px] max-w-[340px] min-w-[280px]">
+            <div class="border rounded bg-white shadow-sm h-full max-h-[480px] overflow-y-auto p-2" id="turnRail">
+              <!-- Turn rail renders here -->
+            </div>
+          </div>
         </div>
-        <div id="tokenStats" class="mt-2 text-sm text-gray-600"></div>
       </div>
 
       <!-- Turn Detail Card -->

@@ -36,7 +36,8 @@ let sessionInput,
   scaleWarning,
   visualizationContainer,
   tokenStats,
-  detailCard;
+  detailCard,
+  turnRail;
 let isLoading = false;
 
 // Initialize on DOM ready
@@ -59,6 +60,7 @@ function init() {
   visualizationContainer = document.getElementById("visualizationContainer");
   tokenStats = document.getElementById("tokenStats");
   detailCard = document.getElementById("detailCard");
+  turnRail = document.getElementById("turnRail");
 
   // Attach event listeners
   loadButton.addEventListener("click", handleLoad);
@@ -94,9 +96,10 @@ async function handleLoad() {
     setLoading(false);
     currentTurn = Math.max(0, sessionData.totalTurns - 1);
 
-    // Setup navigation bounds
-    turnSlider.max = Math.max(0, sessionData.totalTurns - 1);
-    turnInput.max = Math.max(0, sessionData.totalTurns - 1);
+    // Setup navigation bounds (1-based display)
+    const maxTurnDisplay = Math.max(1, sessionData.totalTurns);
+    turnSlider.max = maxTurnDisplay;
+    turnInput.max = maxTurnDisplay;
 
     // Show visualization section
     visualizationSection.classList.remove("hidden");
@@ -106,6 +109,7 @@ async function handleLoad() {
     checkScaleWarning();
     renderVisualization();
     renderDetailCard();
+    renderTurnRail();
   } catch (error) {
     setLoading(false);
     clearVisualization();
@@ -121,6 +125,7 @@ function handleLeftClick() {
     checkScaleWarning();
     renderVisualization();
     renderDetailCard();
+    renderTurnRail();
   }
 }
 
@@ -132,25 +137,28 @@ function handleRightClick() {
     checkScaleWarning();
     renderVisualization();
     renderDetailCard();
+    renderTurnRail();
   }
 }
 
 function handleTurnInputChange() {
   if (!sessionData) return;
-  currentTurn = validateTurnInput(turnInput.value, sessionData.totalTurns - 1);
+  currentTurn = validateTurnInputOneBased(turnInput.value, sessionData.totalTurns) - 1;
   syncNavigation();
   checkScaleWarning();
   renderVisualization();
   renderDetailCard();
+  renderTurnRail();
 }
 
 function handleSliderChange() {
   if (!sessionData) return;
-  currentTurn = parseInt(turnSlider.value, 10);
+  currentTurn = clampTurnDisplay(parseInt(turnSlider.value, 10), sessionData.totalTurns) - 1;
   syncNavigation();
   checkScaleWarning();
   renderVisualization();
   renderDetailCard();
+  renderTurnRail();
 }
 
 function handleScaleInputChange() {
@@ -161,9 +169,11 @@ function handleScaleInputChange() {
 }
 
 function syncNavigation() {
-  turnInput.value = currentTurn;
-  turnSlider.value = currentTurn;
-  turnLabel.textContent = `Turn ${currentTurn + 1} of ${sessionData?.totalTurns ?? 0}`;
+  const turnDisplay = currentTurn + 1;
+  const total = sessionData?.totalTurns ?? 0;
+  turnInput.value = Math.min(Math.max(turnDisplay, 1), Math.max(1, total));
+  turnSlider.value = Math.min(Math.max(turnDisplay, 1), Math.max(1, total));
+  turnLabel.textContent = `Turn ${turnDisplay} of ${total}`;
 
   leftButton.disabled = currentTurn === 0;
   rightButton.disabled = sessionData ? currentTurn === sessionData.totalTurns - 1 : true;
@@ -171,17 +181,47 @@ function syncNavigation() {
 
 function renderVisualization() {
   if (!sessionData) return;
-  const turn = sessionData.turns[currentTurn];
-  const cumulative = turn.cumulative;
+  const turns = sessionData.turns.slice(0, currentTurn + 1);
+  if (!turns.length) return;
+
+  const lastTurn = turns[turns.length - 1];
   const maxTokens = currentScale * 1000;
 
   visualizationContainer.innerHTML = "";
 
   const rect = visualizationContainer.getBoundingClientRect();
   const width = Math.max(rect.width || DEFAULT_WIDTH, 320);
-  const height = Math.max(rect.height || DEFAULT_HEIGHT, 200);
-  const bandWidth = width / 4;
-  const bandGap = 0;
+  const height = 420;
+  const margin = { top: 12, right: 12, bottom: 26, left: 12 };
+  const innerWidth = width - margin.left - margin.right;
+  const innerHeight = height - margin.top - margin.bottom;
+
+  const data = turns.map((turn, idx) => {
+    const turnIndex = Number.isFinite(turn.turnIndex) ? turn.turnIndex : idx;
+    return {
+      turn: turnIndex,
+      user: turn.cumulative.user,
+      assistant: turn.cumulative.assistant,
+      thinking: turn.cumulative.thinking,
+      tool: turn.cumulative.tool,
+    };
+  });
+
+  const xMax =
+    data.length > 0 ? Math.max(data[data.length - 1].turn, 1) : Math.max(currentTurn, 1);
+
+  const stack = d3.stack().keys(["user", "assistant", "thinking", "tool"]);
+  const series = stack(data);
+
+  const xScale = d3.scaleLinear().domain([0, xMax]).range([0, innerWidth]);
+  const yScale = d3.scaleLinear().domain([0, maxTokens]).range([innerHeight, 0]);
+
+  const area = d3
+    .area()
+    .curve(d3.curveMonotoneX)
+    .x((d) => xScale(d.data.turn))
+    .y0((d) => yScale(d[0]))
+    .y1((d) => yScale(d[1]));
 
   const svg = d3
     .select(visualizationContainer)
@@ -189,51 +229,38 @@ function renderVisualization() {
     .attr("width", width)
     .attr("height", height);
 
-  const bands = [
-    { type: "user", tokens: cumulative.user, color: COLORS.user },
-    { type: "assistant", tokens: cumulative.assistant, color: COLORS.assistant },
-    { type: "thinking", tokens: cumulative.thinking, color: COLORS.thinking },
-    { type: "tool", tokens: cumulative.tool, color: COLORS.tool },
-  ];
+  const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
 
-  bands.forEach((band, i) => {
-    const bandHeight = calculateBandHeight(band.tokens, maxTokens, height);
-    const x = i * bandWidth;
-    const y = height - bandHeight;
-
-    svg
-      .append("rect")
-      .attr("x", x)
-      .attr("y", y)
-      .attr("width", bandWidth - bandGap)
-      .attr("height", bandHeight)
-      .attr("fill", band.color);
-
-    if (band.tokens > 0) {
-      svg
-        .append("text")
-        .attr("x", x + bandWidth / 2)
-        .attr("y", y - 5)
-        .attr("text-anchor", "middle")
-        .attr("font-size", "12px")
-        .text(formatTokenCount(band.tokens));
-    }
+  series.forEach((layer) => {
+    g.append("path")
+      .datum(layer)
+      .attr("fill", COLORS[layer.key])
+      .attr("d", area);
   });
 
-  tokenStats.textContent = `Total: ${formatTokenCount(cumulative.total)} tokens`;
+  tokenStats.textContent = `Total: ${formatTokenCount(lastTurn.cumulative.total)} tokens (scale: ${formatTokenCount(
+    maxTokens
+  )})`;
 }
 
 function renderDetailCard() {
   if (!sessionData) return;
   const turn = sessionData.turns[currentTurn];
-  const { userPrompt, assistantResponse, toolBlocks } = turn.content;
+  const { userPrompt, assistantResponse, toolBlocks, toolResults, thinking } = turn.content;
 
-  const toolText =
-    toolBlocks && toolBlocks.length
-      ? toolBlocks
-          .map((t) => `**Tool ${t.name}**\n${truncateToolContent(t.content)}`)
-          .join("\n\n")
-      : "";
+  const toolLines = [];
+  if (toolBlocks && toolBlocks.length) {
+    toolBlocks.forEach((t) => toolLines.push(`**Tool ${t.name}**\n${truncateToolContent(t.content, 6)}`));
+  }
+  if (toolResults && toolResults.length) {
+    toolResults.forEach((t) =>
+      toolLines.push(`**Tool result ${t.name}**\n${truncateToolContent(t.content, 6)}`)
+    );
+  }
+  if (thinking) {
+    toolLines.push(`**Thinking**\n${truncateToolContent(thinking, 6)}`);
+  }
+  const toolText = toolLines.length ? toolLines.join("\n\n") : "";
 
   const md = `
 ### User
@@ -246,6 +273,78 @@ ${toolText ? "### Tools\n" + toolText : ""}
 `.trim();
 
   detailCard.innerHTML = renderMarkdownSafe(md);
+}
+
+function renderTurnRail() {
+  if (!sessionData || !turnRail) return;
+  const turns = sessionData.turns;
+  turnRail.innerHTML = "";
+
+  const frag = document.createDocumentFragment();
+
+  for (let i = currentTurn; i >= 0; i--) {
+    const turn = turns[i];
+    if (!turn) continue;
+    const card = document.createElement("div");
+    card.className = "mb-3 last:mb-0 p-2 rounded border border-gray-200 bg-gray-50 shadow-sm";
+
+    const header = document.createElement("div");
+    header.className = "text-xs text-gray-600 mb-1";
+    header.textContent = `Turn ${i + 1}`;
+    card.appendChild(header);
+
+    const content = turn.content || {};
+    const segments = [];
+
+    if (content.assistantResponse) {
+    segments.push({ type: "assistant", text: content.assistantResponse });
+    }
+
+    if (content.toolBlocks && Array.isArray(content.toolBlocks)) {
+      content.toolBlocks.forEach((t, idx) => {
+        const label = t?.name || `Tool ${idx + 1}`;
+        const text = t?.content || "";
+        segments.push({ type: "tool", text: `${label}: ${text}` });
+      });
+    }
+
+  if (content.toolResults && Array.isArray(content.toolResults)) {
+    content.toolResults.forEach((t, idx) => {
+      const label = t?.name || `Tool result ${idx + 1}`;
+      const text = t?.content || "";
+      segments.push({ type: "tool", text: `Result ${label}: ${text}` });
+    });
+  }
+
+    if (content.thinking) {
+      segments.push({ type: "thinking", text: content.thinking });
+    }
+
+    if (content.userPrompt) {
+      segments.push({ type: "user", text: content.userPrompt });
+    }
+
+    if (!segments.length) {
+      segments.push({ type: "user", text: "(no content)" });
+    }
+
+    segments.forEach((segment) => {
+      const tokens = estimateTokensFromText(segment.text);
+      const item = document.createElement("div");
+      item.className = "rounded px-2 py-1 text-sm mb-2 last:mb-0 truncate border";
+      const baseColor = COLORS[segment.type] || "#9ca3af";
+      item.style.backgroundColor = withAlpha(baseColor, 0.18);
+      item.style.borderColor = withAlpha(baseColor, 0.35);
+      const roleCode = segmentCode(segment.type);
+      item.title = `${roleCode}: ${truncateLine(segment.text, 160)} · ~${tokens} tokens`;
+      item.textContent = `${roleCode}:${tokens}t - ${truncateLine(segment.text, 36)}`;
+      card.appendChild(item);
+    });
+
+    frag.appendChild(card);
+  }
+
+  turnRail.appendChild(frag);
 }
 
 function checkScaleWarning() {
@@ -283,6 +382,9 @@ function clearVisualization() {
   visualizationContainer.innerHTML = "";
   tokenStats.textContent = "";
   detailCard.innerHTML = "";
+  if (turnRail) {
+    turnRail.innerHTML = "";
+  }
 }
 
 function escapeHtml(str) {
@@ -300,5 +402,56 @@ function renderMarkdownSafe(text) {
   const withBold = withHeadings.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   const withItalics = withBold.replace(/_(.+?)_/g, "<em>$1</em>");
   return withItalics.replace(/\n/g, "<br>");
+}
+
+function withAlpha(hex, alpha) {
+  const cleaned = hex.replace("#", "");
+  if (cleaned.length !== 6) return hex;
+  const r = parseInt(cleaned.slice(0, 2), 16);
+  const g = parseInt(cleaned.slice(2, 4), 16);
+  const b = parseInt(cleaned.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function truncateLine(text, max = 80) {
+  if (!text) return "";
+  const collapsed = text.replace(/\s+/g, " ").trim();
+  if (collapsed.length <= max) return collapsed;
+  return `${collapsed.slice(0, max - 1)}…`;
+}
+
+function estimateTokensFromText(text) {
+  if (!text) return 0;
+  const collapsed = text.replace(/\s+/g, " ").trim();
+  // Simple heuristic: ~4 characters per token
+  return Math.max(1, Math.ceil(collapsed.length / 4));
+}
+
+function segmentCode(type) {
+  switch (type) {
+    case "assistant":
+      return "A";
+    case "user":
+      return "U";
+    case "tool":
+      return "T";
+    case "thinking":
+      return "R";
+    default:
+      return "M";
+  }
+}
+
+function validateTurnInputOneBased(value, totalTurns) {
+  const num = parseInt(value, 10);
+  if (Number.isNaN(num)) return 1;
+  const max = Math.max(1, totalTurns);
+  return Math.max(1, Math.min(max, num));
+}
+
+function clampTurnDisplay(displayValue, totalTurns) {
+  const max = Math.max(1, totalTurns);
+  if (Number.isNaN(displayValue)) return 1;
+  return Math.max(1, Math.min(max, displayValue));
 }
 
