@@ -24,6 +24,7 @@ let currentScale = 200;
 // DOM elements
 let sessionInput,
   loadButton,
+  stripButton,
   errorMessage,
   loadingIndicator,
   visualizationSection,
@@ -47,6 +48,7 @@ function init() {
   // Get DOM elements
   sessionInput = document.getElementById("sessionInput");
   loadButton = document.getElementById("loadButton");
+  stripButton = document.getElementById("stripButton");
   errorMessage = document.getElementById("errorMessage");
   loadingIndicator = document.getElementById("loadingIndicator");
   visualizationSection = document.getElementById("visualizationSection");
@@ -64,6 +66,7 @@ function init() {
 
   // Attach event listeners
   loadButton.addEventListener("click", handleLoad);
+  if (stripButton) stripButton.addEventListener("click", handleStrip);
   leftButton.addEventListener("click", handleLeftClick);
   rightButton.addEventListener("click", handleRightClick);
   turnInput.addEventListener("change", handleTurnInputChange);
@@ -101,8 +104,9 @@ async function handleLoad() {
     turnSlider.max = maxTurnDisplay;
     turnInput.max = maxTurnDisplay;
 
-    // Show visualization section
+    // Show visualization section and strip button
     visualizationSection.classList.remove("hidden");
+    if (stripButton) stripButton.classList.remove("hidden");
 
     // Render initial state
     syncNavigation();
@@ -114,6 +118,33 @@ async function handleLoad() {
     setLoading(false);
     clearVisualization();
     showError(error?.message || "Failed to load session");
+  }
+}
+
+async function handleStrip() {
+  const sessionId = sessionInput.value.trim();
+  if (!sessionId) return;
+
+  const originalText = stripButton.textContent;
+  stripButton.disabled = true;
+  stripButton.textContent = "Stripping...";
+
+  try {
+    const res = await fetch(`/api/session/${sessionId}/strip`, { method: "POST" });
+    const data = await res.json();
+
+    if (data.success) {
+      alert(`Stripped ${data.toolCallsRemoved} tool calls and ${data.thinkingBlocksRemoved} thinking blocks.\nBackup: ${data.backupPath}`);
+      // Reload the session to show updated data
+      handleLoad();
+    } else {
+      alert(`Error: ${data.error}`);
+    }
+  } catch (err) {
+    alert(`Failed: ${err.message}`);
+  } finally {
+    stripButton.disabled = false;
+    stripButton.textContent = originalText;
   }
 }
 

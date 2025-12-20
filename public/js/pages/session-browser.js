@@ -183,6 +183,8 @@ class SessionBrowserController {
           ${s.turnCount}
         </td>
         <td class="px-4 py-3 whitespace-nowrap">
+          <button class="strip-btn px-2 py-1 text-sm bg-red-100 hover:bg-red-200 rounded mr-1"
+                  title="Strip all tool calls and thinking (backs up first)">Strip</button>
           <button class="clone-btn px-2 py-1 text-sm bg-blue-100 hover:bg-blue-200 rounded mr-1"
                   title="Clone session">Clone</button>
           <button class="visualize-btn px-2 py-1 text-sm bg-purple-100 hover:bg-purple-200 rounded"
@@ -233,6 +235,9 @@ class SessionBrowserController {
       if (e.target.classList.contains("session-id")) {
         e.stopPropagation();
         this.copySessionId(sessionId);
+      } else if (e.target.classList.contains("strip-btn")) {
+        e.stopPropagation();
+        this.stripSession(sessionId, e.target);
       } else if (e.target.classList.contains("clone-btn")) {
         e.stopPropagation();
         window.location.href = this.getCloneUrl(sessionId, source);
@@ -271,6 +276,28 @@ class SessionBrowserController {
       this.showToast("Session ID copied!");
     } catch {
       this.showToast("Failed to copy");
+    }
+  }
+
+  async stripSession(sessionId, button) {
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = "...";
+
+    try {
+      const res = await fetch(`/api/session/${sessionId}/strip`, { method: "POST" });
+      const data = await res.json();
+
+      if (data.success) {
+        this.showToast(`Stripped ${data.toolCallsRemoved} tools, ${data.thinkingBlocksRemoved} thinking blocks`);
+      } else {
+        this.showToast(`Error: ${data.error}`);
+      }
+    } catch (err) {
+      this.showToast(`Failed: ${err.message}`);
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText;
     }
   }
 

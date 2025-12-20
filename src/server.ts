@@ -17,6 +17,7 @@ import { sessionBrowserRouter } from "./routes/session-browser.js";
 import { sessionResolverRouter } from "./routes/session-resolver.js";
 import { copilotVisualizationRouter } from "./routes/copilot-visualization.js";
 import { copilotCloneRouter } from "./routes/copilot-clone.js";
+import sessionStripRouter from "./routes/session-strip.js";
 import { config } from "./config.js";
 
 const app = express();
@@ -47,6 +48,7 @@ app.use(sessionBrowserRouter);
 app.use(sessionResolverRouter);
 app.use(copilotVisualizationRouter);
 app.use(copilotCloneRouter);
+app.use("/api/session", sessionStripRouter);
 
 // Server-rendered pages (legacy routes still work)
 app.get("/visualize", (req, res) => {
