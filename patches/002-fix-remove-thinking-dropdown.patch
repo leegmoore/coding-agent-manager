@@ -1,0 +1,69 @@
+From aced2f0d4d76b05142f597d49e00a80ef1a4a249 Mon Sep 17 00:00:00 2001
+From: leegmoore <lee.g.moore@gmail.com>
+Date: Sat, 20 Dec 2025 18:01:33 -0500
+Subject: [PATCH] fix: Remove thinking dropdown, always remove 100%
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Remove thinking block removal dropdown from clone UI
+- Hardcode thinkingRemoval to '100' in clone request
+- Add 90% option to tool removal dropdown
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+---
+ public/js/pages/clone.js |  2 +-
+ views/pages/clone.ejs    | 18 +-----------------
+ 2 files changed, 2 insertions(+), 18 deletions(-)
+
+diff --git a/public/js/pages/clone.js b/public/js/pages/clone.js
+index 44facd9..e73b43d 100644
+--- a/public/js/pages/clone.js
++++ b/public/js/pages/clone.js
+@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
+       const result = await post('/api/v2/clone', {
+         sessionId,
+         toolRemoval: formData.get('toolRemoval'),
+-        thinkingRemoval: formData.get('thinkingRemoval'),
++        thinkingRemoval: '100', // Always remove all thinking blocks
+         compressionBands,
+         debugLog,
+       });
+diff --git a/views/pages/clone.ejs b/views/pages/clone.ejs
+index 3e6a47b..603d0f4 100644
+--- a/views/pages/clone.ejs
++++ b/views/pages/clone.ejs
+@@ -48,27 +48,11 @@
+             <option value="none">None</option>
+             <option value="50">50% (oldest half)</option>
+             <option value="75">75% (oldest three-quarters)</option>
++            <option value="90">90% (oldest 90%)</option>
+             <option value="100">100% (all)</option>
+           </select>
+           <p class="mt-1 text-sm text-gray-500">Remove tool calls from oldest portion</p>
+         </div>
+-
+-        <div>
+-          <label for="thinkingRemoval" class="block text-sm font-medium text-gray-700 mb-2">
+-            Thinking Block Removal
+-          </label>
+-          <select
+-            id="thinkingRemoval"
+-            name="thinkingRemoval"
+-            class="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+-          >
+-            <option value="none">None</option>
+-            <option value="50">50% (oldest half)</option>
+-            <option value="75">75% (oldest three-quarters)</option>
+-            <option value="100">100% (all)</option>
+-          </select>
+-          <p class="mt-1 text-sm text-gray-500">Remove thinking blocks from oldest portion</p>
+-        </div>
+       </div>
+ 
+       <!-- Compression Bands -->
+-- 
+2.49.0
+

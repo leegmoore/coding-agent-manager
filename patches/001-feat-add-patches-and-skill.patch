@@ -1,0 +1,54 @@
+From 8e5295bdb4cad087e6e69b37cc41c6621bffb15d Mon Sep 17 00:00:00 2001
+From: leegmoore <lee.g.moore@gmail.com>
+Date: Sat, 20 Dec 2025 18:00:39 -0500
+Subject: [PATCH] feat: Add patches directory and cat-patch skill
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Create patches/ directory for storing commit patches
+- Add cat-patch skill to generate patches on request
+- Skill activates when user asks to create/make a patch
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+---
+ .claude/skills/cat-patch/SKILL.md | 25 +++++++++++++++++++++++++
+ 1 file changed, 25 insertions(+)
+ create mode 100644 .claude/skills/cat-patch/SKILL.md
+
+diff --git a/.claude/skills/cat-patch/SKILL.md b/.claude/skills/cat-patch/SKILL.md
+new file mode 100644
+index 0000000..e09c60a
+--- /dev/null
++++ b/.claude/skills/cat-patch/SKILL.md
+@@ -0,0 +1,25 @@
++---
++name: cat-patch
++description: Create a git patch file from the last commit. Use when the user asks to create a patch, make a patch, generate a patch, or export a commit as a patch file.
++---
++
++# Create Patch from Last Commit
++
++## Instructions
++
++When the user asks to create a patch:
++
++1. Run `git format-patch -1 HEAD -o patches/` to create a patch file from the last commit
++2. Report the created patch filename to the user
++
++## Example Usage
++
++User: "create a patch"
++User: "patch that commit"
++User: "make a patch file"
++User: "cat-patch"
++
++## Output
++
++The patch file will be created in the `patches/` directory with a name like:
++`0001-feat-description-of-commit.patch`
+-- 
+2.49.0
+
