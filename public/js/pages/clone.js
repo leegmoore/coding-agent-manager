@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = await post('/api/v2/clone', {
         sessionId,
         toolRemoval: formData.get('toolRemoval'),
-        thinkingRemoval: formData.get('thinkingRemoval'),
+        thinkingRemoval: '100', // Always remove all thinking blocks
         compressionBands,
         debugLog,
       });
