@@ -3,7 +3,9 @@ import os from "os";
 import type { CompressionConfig } from "./types.js";
 
 export const config = {
-  claudeDir: process.env.CLAUDE_DIR || path.join(os.homedir(), ".claude"),
+  get claudeDir() {
+    return process.env.CLAUDE_DIR || path.join(os.homedir(), ".claude");
+  },
   port: parseInt(process.env.PORT || "3000", 10),
   get projectsDir() {
     return path.join(this.claudeDir, "projects");

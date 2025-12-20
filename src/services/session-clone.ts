@@ -60,6 +60,72 @@ export function parseSession(content: string): SessionEntry[] {
   return lines.map(line => JSON.parse(line) as SessionEntry);
 }
 
+// === Clone Title Generation (for summary entry) ===
+
+/**
+ * Format a timestamp for display in clone title.
+ * Format: "Dec 12 2:30pm"
+ */
+function formatTimestamp(date: Date): string {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const month = months[date.getMonth()];
+  const day = date.getDate();
+  let hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  const ampm = hours >= 12 ? "pm" : "am";
+  hours = hours % 12 || 12;
+  return `${month} ${day} ${hours}:${minutes}${ampm}`;
+}
+
+/**
+ * Generate a descriptive title for cloned sessions.
+ * Format: "Clone: <first N chars of message> (<timestamp>)"
+ */
+function generateCloneTitle(firstUserMessage: string, maxLength: number = 50): string {
+  const trimmed = firstUserMessage.trim();
+  const preview = trimmed.length === 0
+    ? "(No message)"
+    : trimmed.length <= maxLength
+      ? trimmed
+      : trimmed.slice(0, maxLength) + "...";
+
+  const timestamp = formatTimestamp(new Date(Date.now()));
+  return `Clone: ${preview} (${timestamp})`;
+}
+
+/**
+ * Extract the first user message content from session entries.
+ */
+function extractFirstUserMessage(entries: SessionEntry[]): string {
+  const firstUser = entries.find(e => e.type === "user" && e.message?.content);
+  if (!firstUser || !firstUser.message) return "";
+
+  const content = firstUser.message.content;
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    const textBlock = content.find((b: unknown) =>
+      typeof b === "object" && b !== null && (b as { type?: string }).type === "text"
+    );
+    return (textBlock as { text?: string })?.text || "";
+  }
+  return "";
+}
+
+/**
+ * Create a summary entry for the cloned session.
+ */
+function createSummaryEntry(entries: SessionEntry[], firstUserMessage: string): SessionEntry {
+  // Find the first entry with a uuid to use as leafUuid
+  const firstWithUuid = entries.find(e => e.uuid);
+  const leafUuid = firstWithUuid?.uuid || randomUUID();
+
+  return {
+    type: "summary",
+    summary: generateCloneTitle(firstUserMessage),
+    leafUuid,
+  } as SessionEntry;
+}
+
 /**
  * Determines if an entry represents the start of a new turn.
  * A new turn starts when a user sends text content (not a tool result).
@@ -322,14 +388,21 @@ export async function cloneSession(request: CloneRequest): Promise<CloneResponse
   // Identify turns in output (may have changed)
   const outputTurns = identifyTurns(finalEntries);
   const outputTurnCount = outputTurns.length;
-  
+
+  // Extract first user message and create summary entry
+  const firstUserMessage = extractFirstUserMessage(entries);
+  const summaryEntry = createSummaryEntry(finalEntries, firstUserMessage);
+
   // Write output file (same directory as source)
   const sourceDir = path.dirname(sourcePath);
   const outputPath = path.join(sourceDir, `${newSessionId}.jsonl`);
-  
-  // Convert back to JSONL
-  const outputContent = finalEntries.map(entry => JSON.stringify(entry)).join("\n") + "\n";
-  
+
+  // Convert back to JSONL with summary entry prepended
+  const outputContent = [
+    JSON.stringify(summaryEntry),
+    ...finalEntries.map(entry => JSON.stringify(entry))
+  ].join("\n") + "\n";
+
   await writeFile(outputPath, outputContent, "utf-8");
   
   // Log lineage
@@ -420,11 +493,17 @@ export async function cloneSessionV2(
   const outputTurns = identifyTurns(finalEntries);
   const outputTurnCount = outputTurns.length;
 
+  // 7.5 Extract first user message and create summary entry
+  const firstUserMessageV2 = extractFirstUserMessage(entries);
+  const summaryEntryV2 = createSummaryEntry(finalEntries, firstUserMessageV2);
+
   // 8. Write output file
   const sourceDir = path.dirname(sourcePath);
   const outputPath = path.join(sourceDir, `${newSessionId}.jsonl`);
-  const outputContent =
-    finalEntries.map((e) => JSON.stringify(e)).join("\n") + "\n";
+  const outputContent = [
+    JSON.stringify(summaryEntryV2),
+    ...finalEntries.map((e) => JSON.stringify(e))
+  ].join("\n") + "\n";
   await writeFile(outputPath, outputContent, "utf-8");
 
   // 9. Log lineage with compression info
