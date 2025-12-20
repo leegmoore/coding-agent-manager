@@ -124,3 +124,41 @@ export interface SessionTurnsResponse {
   totalTurns: number;
   turns: TurnData[];
 }
+
+// Session Browser types
+
+export interface ProjectInfo {
+  /** Encoded folder name (filesystem safe) */
+  folder: string;
+  /** Human-readable decoded path (best-effort, may be incorrect for paths with dashes) */
+  path: string;
+}
+
+export interface SessionSummary {
+  /** Session identifier (filename without extension) */
+  sessionId: string;
+  /** Source type for multi-source support */
+  source: "claude" | "copilot";
+  /** Human-readable project path */
+  projectPath: string;
+  /** First ~100 chars of first user message */
+  firstMessage: string;
+  /** File creation timestamp */
+  createdAt: Date;
+  /** File last modified timestamp */
+  lastModifiedAt: Date;
+  /** File size in bytes */
+  sizeBytes: number;
+  /** Number of conversation turns */
+  turnCount: number;
+}
+
+export interface ProjectsResponse {
+  projects: ProjectInfo[];
+}
+
+export interface SessionsResponse {
+  folder: string;
+  path: string;
+  sessions: SessionSummary[];
+}
