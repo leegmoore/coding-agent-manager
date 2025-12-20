@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { getProvider, resetProvider } from "../../src/providers/index.js";
 import { ClaudeCliProvider } from "../../src/providers/claude-cli-provider.js";
 import { OpenRouterProvider } from "../../src/providers/openrouter-provider.js";
-import { ClaudeSdkProvider } from "../../src/providers/claude-sdk-provider.js";
 
 /**
  * Provider Factory Tests
@@ -65,11 +64,5 @@ describe("getProvider", () => {
     process.env.LLM_PROVIDER = "cc-cli";
     const provider = getProvider();
     expect(provider).toBeInstanceOf(ClaudeCliProvider);
-  });
-
-  it("returns ClaudeSdkProvider when LLM_PROVIDER=claude-sdk", () => {
-    process.env.LLM_PROVIDER = "claude-sdk";
-    const provider = getProvider();
-    expect(provider).toBeInstanceOf(ClaudeSdkProvider);
   });
 });
