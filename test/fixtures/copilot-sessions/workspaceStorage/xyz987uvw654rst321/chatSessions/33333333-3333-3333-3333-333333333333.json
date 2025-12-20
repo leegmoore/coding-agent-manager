@@ -1,0 +1,31 @@
+{
+  "version": 3,
+  "sessionId": "33333333-3333-3333-3333-333333333333",
+  "creationDate": 1733800000000,
+  "lastMessageDate": 1733850000000,
+  "customTitle": "Test Session with Canceled Request",
+  "isImported": false,
+  "requests": [
+    {
+      "requestId": "request_1",
+      "message": { "text": "First request", "parts": [] },
+      "response": [{ "value": "First response" }],
+      "isCanceled": false,
+      "timestamp": 1733800000000
+    },
+    {
+      "requestId": "request_2",
+      "message": { "text": "Second request (canceled)", "parts": [] },
+      "response": [],
+      "isCanceled": true,
+      "timestamp": 1733810000000
+    },
+    {
+      "requestId": "request_3",
+      "message": { "text": "Third request", "parts": [] },
+      "response": [{ "value": "Third response" }],
+      "isCanceled": false,
+      "timestamp": 1733820000000
+    }
+  ]
+}

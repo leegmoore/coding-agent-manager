@@ -1,0 +1,2 @@
+{"type":"user","uuid":"u1","parentUuid":null,"sessionId":"11111111-1111-1111-1111-111111111111","message":{"role":"user","content":"Can you help me refactor this code?"}}
+{"type":"assistant","uuid":"a1","parentUuid":"u1","sessionId":"11111111-1111-1111-1111-111111111111","message":{"role":"assistant","content":[{"type":"text","text":"Sure, I can help you refactor."}],"stop_reason":"end_turn"}}

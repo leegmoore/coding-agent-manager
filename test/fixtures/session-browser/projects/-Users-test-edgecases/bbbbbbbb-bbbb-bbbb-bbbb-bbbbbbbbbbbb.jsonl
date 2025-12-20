@@ -1,0 +1,5 @@
+{"type":"user","uuid":"u1","parentUuid":null,"sessionId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","message":{"role":"user","content":"Valid message after malformed line"}}
+not valid json line
+{"type":"assistant","uuid":"a1","parentUuid":"u1","sessionId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","message":{"role":"assistant","content":[{"type":"text","text":"Response."}],"stop_reason":"end_turn"}}
+{"type":"user","uuid":"u2","parentUuid":"a1","sessionId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","message":{"role":"user","content":"Second user message"}}
+{"type":"assistant","uuid":"a2","parentUuid":"u2","sessionId":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","message":{"role":"assistant","content":[{"type":"text","text":"Second response."}],"stop_reason":"end_turn"}}

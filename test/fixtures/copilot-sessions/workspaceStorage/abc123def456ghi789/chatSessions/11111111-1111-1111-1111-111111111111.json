@@ -1,0 +1,30 @@
+{
+  "version": 3,
+  "sessionId": "11111111-1111-1111-1111-111111111111",
+  "creationDate": 1733900000000,
+  "lastMessageDate": 1733950000000,
+  "customTitle": "Test Session Alpha-1",
+  "isImported": false,
+  "requests": [
+    {
+      "requestId": "request_1",
+      "message": { "text": "Help me refactor the authentication module to use JWT tokens", "parts": [] },
+      "response": [
+        { "kind": "markdownContent", "value": "I'll help you refactor the authentication module to use JWT tokens. Here's how we can approach this:" }
+      ],
+      "isCanceled": false,
+      "timestamp": 1733900000000
+    },
+    {
+      "requestId": "request_2",
+      "message": { "text": "Add error handling for token expiration", "parts": [] },
+      "response": [
+        { "kind": "markdownContent", "value": "I'll add comprehensive error handling for token expiration scenarios." }
+      ],
+      "isCanceled": false,
+      "timestamp": 1733910000000
+    }
+  ],
+  "requesterUsername": "testuser",
+  "responderUsername": "GitHub Copilot"
+}

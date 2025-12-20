@@ -1,0 +1,19 @@
+{
+  "version": 3,
+  "sessionId": "22222222-2222-2222-2222-222222222222",
+  "creationDate": 1733800000000,
+  "lastMessageDate": 1733850000000,
+  "customTitle": "Test Session Alpha-2",
+  "isImported": false,
+  "requests": [
+    {
+      "requestId": "request_1",
+      "message": { "text": "Create a new React component for the dashboard", "parts": [] },
+      "response": [{ "kind": "markdownContent", "value": "Creating component." }],
+      "isCanceled": false,
+      "timestamp": 1733800000000
+    }
+  ],
+  "requesterUsername": "testuser",
+  "responderUsername": "GitHub Copilot"
+}

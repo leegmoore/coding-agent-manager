@@ -7,7 +7,6 @@ import {
   extractTurnContent,
   classifyBlock,
 } from "../src/services/session-turns.js";
-import { config } from "../src/config.js";
 import type { SessionEntry, Turn, ContentBlock } from "../src/types.js";
 
 const validSessionId = "00000000-0000-0000-0000-000000000002";
@@ -19,7 +18,6 @@ let server: ReturnType<typeof app.listen>;
 beforeAll(() => {
   // Point CLAUDE_DIR to test fixtures for session-turns
   process.env.CLAUDE_DIR = path.join(process.cwd(), "test/fixtures/session-turns");
-  config.claudeDir = process.env.CLAUDE_DIR;
 
   server = app.listen(0);
   const address = server.address();

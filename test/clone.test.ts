@@ -39,6 +39,13 @@ function loadFixture(filename: string): string {
   return fs.readFileSync(fixturePath, "utf-8");
 }
 
+// Helper to skip the summary entry line (first line) from cloned output
+function skipSummaryLine(content: string): string {
+  const lines = content.trim().split("\n");
+  // First line is now always the summary entry
+  return lines.slice(1).join("\n");
+}
+
 describe("Session Clone Service", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -104,7 +111,8 @@ describe("Session Clone Service", () => {
       expect(result.stats.toolCallsRemoved).toBeGreaterThan(0);
       expect(writeFile).toHaveBeenCalled();
       const writtenContent = vi.mocked(writeFile).mock.calls[0][1] as string;
-      expect(writtenContent.trim()).toBe(expected.trim());
+      // Skip summary line (first line) when comparing to expected fixture
+      expect(skipSummaryLine(writtenContent)).toBe(expected.trim());
     });
   });
 
@@ -127,7 +135,8 @@ describe("Session Clone Service", () => {
       expect(result.stats.thinkingBlocksRemoved).toBeGreaterThan(0);
       expect(writeFile).toHaveBeenCalled();
       const writtenContent = vi.mocked(writeFile).mock.calls[0][1] as string;
-      expect(writtenContent.trim()).toBe(expected.trim());
+      // Skip summary line (first line) when comparing to expected fixture
+      expect(skipSummaryLine(writtenContent)).toBe(expected.trim());
     });
   });
 
@@ -151,7 +160,8 @@ describe("Session Clone Service", () => {
       expect(result.stats.thinkingBlocksRemoved).toBeGreaterThan(0);
       expect(writeFile).toHaveBeenCalled();
       const writtenContent = vi.mocked(writeFile).mock.calls[0][1] as string;
-      expect(writtenContent.trim()).toBe(expected.trim());
+      // Skip summary line (first line) when comparing to expected fixture
+      expect(skipSummaryLine(writtenContent)).toBe(expected.trim());
     });
   });
 

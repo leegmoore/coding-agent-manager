@@ -65,4 +65,10 @@ describe("getProvider", () => {
     const provider = getProvider();
     expect(provider).toBeInstanceOf(ClaudeCliProvider);
   });
+
+  // Note: claude-sdk provider not yet implemented - test removed
+  it("throws for unimplemented claude-sdk provider", () => {
+    process.env.LLM_PROVIDER = "claude-sdk";
+    expect(() => getProvider()).toThrow("Invalid LLM_PROVIDER");
+  });
 });

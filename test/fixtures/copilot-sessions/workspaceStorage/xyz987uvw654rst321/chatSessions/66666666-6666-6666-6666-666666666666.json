@@ -1,0 +1,232 @@
+{
+  "version": 3,
+  "sessionId": "66666666-6666-6666-6666-666666666666",
+  "creationDate": 1733800000000,
+  "lastMessageDate": 1733850000000,
+  "customTitle": "Tool Invocation Test Session",
+  "isImported": false,
+  "requests": [
+    {
+      "requestId": "request_tool_1",
+      "responseId": "response_tool_1",
+      "message": {
+        "text": "Run npm test to check if all tests pass",
+        "parts": [{
+          "range": { "start": 0, "endExclusive": 41 },
+          "editorRange": {
+            "startLineNumber": 1,
+            "startColumn": 1,
+            "endLineNumber": 1,
+            "endColumn": 42
+          },
+          "text": "Run npm test to check if all tests pass",
+          "kind": "text"
+        }]
+      },
+      "variableData": { "variables": [] },
+      "response": [
+        { "kind": "mcpServersStarting", "didStartServerIds": [] },
+        { "kind": "prepareToolInvocation", "toolName": "run_in_terminal" },
+        {
+          "kind": "toolInvocationSerialized",
+          "invocationMessage": "Using \"Run in Terminal\"",
+          "pastTenseMessage": "Ran command in terminal",
+          "isConfirmed": { "type": 1 },
+          "isComplete": true,
+          "source": { "type": "internal", "label": "Built-In" },
+          "toolCallId": "tool_call_001",
+          "toolId": "run_in_terminal",
+          "toolSpecificData": {
+            "kind": "terminal",
+            "terminalToolSessionId": "term-session-001",
+            "terminalCommandId": "cmd-001",
+            "commandLine": {
+              "original": "npm test",
+              "toolEdited": "npm test"
+            },
+            "language": "sh"
+          }
+        },
+        {
+          "value": "All tests passed successfully! The test suite completed with 42 tests passing.",
+          "supportThemeIcons": false,
+          "supportHtml": false,
+          "baseUri": { "$mid": 1, "path": "/workspace/", "scheme": "file" }
+        }
+      ],
+      "result": {
+        "timings": { "firstProgress": 500, "totalElapsed": 5000 },
+        "metadata": {
+          "codeBlocks": [],
+          "toolCallRounds": [{
+            "response": "I'll run the test suite for you.",
+            "toolCalls": [{
+              "name": "run_in_terminal",
+              "arguments": "{\"command\":\"npm test\"}",
+              "id": "toolu_001"
+            }],
+            "toolInputRetry": 0,
+            "id": "round_1"
+          }],
+          "toolCallResults": {
+            "toolu_001": {
+              "$mid": 1,
+              "content": [{
+                "$mid": 1,
+                "value": "PASS  test/example.test.ts\n  Test Suite\n    ✓ passes (5ms)\n\nTest Suites: 1 passed, 1 total\nTests:       42 passed, 42 total"
+              }]
+            }
+          },
+          "cacheKey": "file:///Users/test/projectbeta",
+          "modelMessageId": "msg_001",
+          "responseId": "response_tool_1",
+          "sessionId": "model-session-001",
+          "agentId": "github.copilot.editsAgent"
+        },
+        "details": "Claude Opus 4.5 (Preview)"
+      },
+      "isCanceled": false,
+      "followups": [],
+      "timestamp": 1733800000000,
+      "modelId": "copilot/claude-opus-4.5",
+      "agent": {
+        "extensionId": { "value": "GitHub.copilot-chat", "_lower": "github.copilot-chat" },
+        "extensionVersion": "0.33.5",
+        "publisherDisplayName": "GitHub",
+        "extensionPublisherId": "GitHub",
+        "extensionDisplayName": "GitHub Copilot Chat",
+        "id": "github.copilot.editsAgent",
+        "description": "AI pair programmer",
+        "when": "always",
+        "metadata": {
+          "themeIcon": { "id": "copilot" },
+          "hasFollowups": true,
+          "supportIssueReporting": false
+        },
+        "name": "copilot",
+        "fullName": "GitHub Copilot",
+        "isDefault": true,
+        "locations": ["panel", "editor"],
+        "modes": ["agent", "chat"],
+        "slashCommands": [],
+        "disambiguation": []
+      },
+      "responseMarkdownInfo": [],
+      "contentReferences": [],
+      "codeCitations": []
+    },
+    {
+      "requestId": "request_tool_2",
+      "responseId": "response_tool_2",
+      "message": {
+        "text": "Read the package.json file",
+        "parts": [{
+          "range": { "start": 0, "endExclusive": 26 },
+          "editorRange": {
+            "startLineNumber": 1,
+            "startColumn": 1,
+            "endLineNumber": 1,
+            "endColumn": 27
+          },
+          "text": "Read the package.json file",
+          "kind": "text"
+        }]
+      },
+      "variableData": { "variables": [] },
+      "response": [
+        { "kind": "mcpServersStarting", "didStartServerIds": [] },
+        { "kind": "prepareToolInvocation", "toolName": "copilot_readFile" },
+        {
+          "kind": "toolInvocationSerialized",
+          "invocationMessage": "Reading file \"package.json\"",
+          "pastTenseMessage": "Read file \"package.json\"",
+          "isConfirmed": { "type": 4 },
+          "isComplete": true,
+          "source": { "type": "internal", "label": "Built-In" },
+          "toolCallId": "tool_call_002",
+          "toolId": "copilot_readFile"
+        },
+        {
+          "value": "Here's the content of package.json. It shows the project is using TypeScript and has several dependencies.",
+          "supportThemeIcons": false,
+          "supportHtml": false,
+          "baseUri": { "$mid": 1, "path": "/workspace/", "scheme": "file" }
+        }
+      ],
+      "result": {
+        "timings": { "firstProgress": 200, "totalElapsed": 1500 },
+        "metadata": {
+          "codeBlocks": [{
+            "code": "{\n  \"name\": \"test-project\",\n  \"version\": \"1.0.0\"\n}",
+            "language": "json",
+            "markdownBeforeBlock": "Here's the package.json content:"
+          }],
+          "toolCallRounds": [{
+            "response": "I'll read the package.json file for you.",
+            "toolCalls": [{
+              "name": "copilot_readFile",
+              "arguments": "{\"path\":\"package.json\"}",
+              "id": "toolu_002"
+            }],
+            "toolInputRetry": 0,
+            "id": "round_2"
+          }],
+          "toolCallResults": {
+            "toolu_002": {
+              "$mid": 1,
+              "content": [{
+                "$mid": 1,
+                "value": "{\n  \"name\": \"test-project\",\n  \"version\": \"1.0.0\"\n}"
+              }]
+            }
+          },
+          "cacheKey": "file:///Users/test/projectbeta",
+          "modelMessageId": "msg_002",
+          "responseId": "response_tool_2",
+          "sessionId": "model-session-001",
+          "agentId": "github.copilot.editsAgent"
+        },
+        "details": "Claude Opus 4.5 (Preview)"
+      },
+      "isCanceled": false,
+      "followups": [],
+      "timestamp": 1733810000000,
+      "modelId": "copilot/claude-opus-4.5",
+      "agent": {
+        "extensionId": { "value": "GitHub.copilot-chat", "_lower": "github.copilot-chat" },
+        "extensionVersion": "0.33.5",
+        "publisherDisplayName": "GitHub",
+        "extensionPublisherId": "GitHub",
+        "extensionDisplayName": "GitHub Copilot Chat",
+        "id": "github.copilot.editsAgent",
+        "description": "AI pair programmer",
+        "when": "always",
+        "metadata": {
+          "themeIcon": { "id": "copilot" },
+          "hasFollowups": true,
+          "supportIssueReporting": false
+        },
+        "name": "copilot",
+        "fullName": "GitHub Copilot",
+        "isDefault": true,
+        "locations": ["panel", "editor"],
+        "modes": ["agent", "chat"],
+        "slashCommands": [],
+        "disambiguation": []
+      },
+      "responseMarkdownInfo": [],
+      "contentReferences": [],
+      "codeCitations": []
+    }
+  ],
+  "requesterUsername": "testuser",
+  "requesterAvatarIconUri": {
+    "$mid": 1,
+    "path": "/u/12345",
+    "scheme": "https",
+    "authority": "avatars.githubusercontent.com"
+  },
+  "responderUsername": "GitHub Copilot",
+  "responderAvatarIconUri": { "id": "copilot" },
+  "initialLocation": "panel"
+}

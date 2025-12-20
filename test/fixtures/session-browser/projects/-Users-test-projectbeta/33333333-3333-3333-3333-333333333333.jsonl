@@ -1,0 +1,6 @@
+{"type":"user","uuid":"u1","parentUuid":null,"sessionId":"33333333-3333-3333-3333-333333333333","message":{"role":"user","content":"First message"}}
+{"type":"assistant","uuid":"a1","parentUuid":"u1","sessionId":"33333333-3333-3333-3333-333333333333","message":{"role":"assistant","content":[{"type":"text","text":"First response."}],"stop_reason":"end_turn"}}
+{"type":"user","uuid":"u2","parentUuid":"a1","sessionId":"33333333-3333-3333-3333-333333333333","message":{"role":"user","content":"Second message"}}
+{"type":"assistant","uuid":"a2","parentUuid":"u2","sessionId":"33333333-3333-3333-3333-333333333333","message":{"role":"assistant","content":[{"type":"text","text":"Second response."}],"stop_reason":"end_turn"}}
+{"type":"user","uuid":"u3","parentUuid":"a2","sessionId":"33333333-3333-3333-3333-333333333333","message":{"role":"user","content":"Third message"}}
+{"type":"assistant","uuid":"a3","parentUuid":"u3","sessionId":"33333333-3333-3333-3333-333333333333","message":{"role":"assistant","content":[{"type":"text","text":"Third response."}],"stop_reason":"end_turn"}}

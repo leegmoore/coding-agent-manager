@@ -1,0 +1,1 @@
+{"type":"assistant","uuid":"a1","parentUuid":null,"sessionId":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","message":{"role":"assistant","content":[{"type":"text","text":"Response without user message."}],"stop_reason":"end_turn"}}
