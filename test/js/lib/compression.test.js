@@ -70,8 +70,8 @@ describe('validateBands', () => {
 });
 
 describe('buildCompressionBands', () => {
-  it('returns null for empty inputs', () => {
-    expect(buildCompressionBands('', '')).toBeNull();
+  it('returns undefined for empty inputs', () => {
+    expect(buildCompressionBands('', '')).toBeUndefined();
   });
 
   it('builds correct bands array', () => {
