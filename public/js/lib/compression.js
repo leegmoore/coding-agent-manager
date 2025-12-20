@@ -53,14 +53,14 @@ export function validateBands(band1, band2) {
  * Builds compression bands array for API
  * @param {string} band1 - Band 1 end percentage
  * @param {string} band2 - Band 2 end percentage
- * @returns {Array|null} Bands array or null if no compression
+ * @returns {Array|undefined} Bands array or undefined if no compression
  */
 export function buildCompressionBands(band1, band2) {
   const b1 = band1.trim();
   const b2 = band2.trim();
 
   if (b1 === '' && b2 === '') {
-    return null;
+    return undefined;  // Changed from null to undefined to match Zod .optional()
   }
 
   return [
