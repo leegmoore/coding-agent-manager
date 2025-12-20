@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session Browser - Coding Agent Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-6">Session Browser</h1>
+
+    <!-- Source Toggle -->
+    <div class="mb-6">
+      <label class="block text-sm font-medium text-gray-700 mb-2">Source</label>
+      <div id="source-toggle" class="flex gap-2">
+        <button
+          type="button"
+          data-source="claude"
+          class="source-btn px-4 py-2 rounded-lg font-medium transition-colors bg-blue-600 text-white"
+        >
+          Claude Code
+        </button>
+        <button
+          type="button"
+          data-source="copilot"
+          class="source-btn px-4 py-2 rounded-lg font-medium transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300"
+        >
+          GitHub Copilot
+        </button>
+      </div>
+    </div>
+
+    <!-- Project Selector -->
+    <div class="mb-6">
+      <label for="project-select" class="block text-sm font-medium text-gray-700 mb-2">
+        Project
+      </label>
+      <select id="project-select" aria-label="Select a project" class="w-full max-w-xl px-4 py-2 border rounded-lg">
+        <option value="">Select a project...</option>
+      </select>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loading" class="hidden text-gray-600" aria-live="polite">
+      <div class="flex items-center gap-2">
+        <svg class="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <span>Loading sessions...</span>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-message" class="hidden text-gray-500 py-8 text-center" aria-live="polite">
+      No sessions found.
+    </div>
+
+    <!-- Error State -->
+    <div id="error-message" class="hidden text-red-600 bg-red-50 border border-red-200 rounded-lg py-4 px-6" role="alert" aria-live="assertive">
+      <div class="flex items-center justify-center gap-3">
+        <span>An error occurred.</span>
+        <button id="retry-btn" class="px-3 py-1 text-sm bg-red-100 hover:bg-red-200 rounded transition-colors">
+          Retry
+        </button>
+      </div>
+    </div>
+
+    <!-- Sessions Table -->
+    <div id="session-table-container" class="hidden">
+      <table id="session-table" class="w-full bg-white rounded-lg shadow">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="sessionId">ID</th>
+            <th scope="col" class="px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="firstMessage">First Message</th>
+            <th scope="col" class="px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="createdAt">Created</th>
+            <th scope="col" class="px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="lastModifiedAt">Modified</th>
+            <th scope="col" class="px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="sizeBytes">Size</th>
+            <th scope="col" class="px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer" data-sort="turnCount">Turns</th>
+            <th scope="col" class="px-4 py-3 text-left text-sm font-medium text-gray-700">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="session-body">
+          <!-- Rows inserted by JavaScript -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Toast for clipboard feedback -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded shadow-lg hidden" role="status" aria-live="polite">
+      Copied!
+    </div>
+  </div>
+
+  <script type="module" src="/js/pages/session-browser.js"></script>
+</body>
+</html>
