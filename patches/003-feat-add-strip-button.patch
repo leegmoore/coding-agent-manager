@@ -1,0 +1,283 @@
+From 20f756bae64c08fd12a673983d28646acd7d2f14 Mon Sep 17 00:00:00 2001
+From: leegmoore <lee.g.moore@gmail.com>
+Date: Sat, 20 Dec 2025 18:55:39 -0500
+Subject: [PATCH] feat: Add 1-click Strip button to session browser and detail
+ pages
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- POST /api/session/:id/strip endpoint
+- Backs up session before stripping
+- Removes 100% tool calls + 100% thinking in place
+- Strip button on session browser (red, next to Clone)
+- Strip button on session detail (appears after loading)
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+---
+ public/js/pages/session-browser.js | 27 +++++++++
+ public/js/pages/session-detail.js  | 33 ++++++++++-
+ src/routes/session-strip.ts        | 88 ++++++++++++++++++++++++++++++
+ src/server.ts                      |  2 +
+ views/pages/session-detail.ejs     |  3 +
+ 5 files changed, 152 insertions(+), 1 deletion(-)
+ create mode 100644 src/routes/session-strip.ts
+
+diff --git a/public/js/pages/session-browser.js b/public/js/pages/session-browser.js
+index 12e7c77..e8fba9f 100644
+--- a/public/js/pages/session-browser.js
++++ b/public/js/pages/session-browser.js
+@@ -183,6 +183,8 @@ class SessionBrowserController {
+           ${s.turnCount}
+         </td>
+         <td class="px-4 py-3 whitespace-nowrap">
++          <button class="strip-btn px-2 py-1 text-sm bg-red-100 hover:bg-red-200 rounded mr-1"
++                  title="Strip all tool calls and thinking (backs up first)">Strip</button>
+           <button class="clone-btn px-2 py-1 text-sm bg-blue-100 hover:bg-blue-200 rounded mr-1"
+                   title="Clone session">Clone</button>
+           <button class="visualize-btn px-2 py-1 text-sm bg-purple-100 hover:bg-purple-200 rounded"
+@@ -233,6 +235,9 @@ class SessionBrowserController {
+       if (e.target.classList.contains("session-id")) {
+         e.stopPropagation();
+         this.copySessionId(sessionId);
++      } else if (e.target.classList.contains("strip-btn")) {
++        e.stopPropagation();
++        this.stripSession(sessionId, e.target);
+       } else if (e.target.classList.contains("clone-btn")) {
+         e.stopPropagation();
+         window.location.href = this.getCloneUrl(sessionId, source);
+@@ -274,6 +279,28 @@ class SessionBrowserController {
+     }
+   }
+ 
++  async stripSession(sessionId, button) {
++    const originalText = button.textContent;
++    button.disabled = true;
++    button.textContent = "...";
++
++    try {
++      const res = await fetch(`/api/session/${sessionId}/strip`, { method: "POST" });
++      const data = await res.json();
++
++      if (data.success) {
++        this.showToast(`Stripped ${data.toolCallsRemoved} tools, ${data.thinkingBlocksRemoved} thinking blocks`);
++      } else {
++        this.showToast(`Error: ${data.error}`);
++      }
++    } catch (err) {
++      this.showToast(`Failed: ${err.message}`);
++    } finally {
++      button.disabled = false;
++      button.textContent = originalText;
++    }
++  }
++
+   updateSortIndicators() {
+     document.querySelectorAll("[data-sort]").forEach(header => {
+       const indicator = header.querySelector(".sort-indicator") || document.createElement("span");
+diff --git a/public/js/pages/session-detail.js b/public/js/pages/session-detail.js
+index f1d1cbb..23548e8 100644
+--- a/public/js/pages/session-detail.js
++++ b/public/js/pages/session-detail.js
+@@ -24,6 +24,7 @@ let currentScale = 200;
+ // DOM elements
+ let sessionInput,
+   loadButton,
++  stripButton,
+   errorMessage,
+   loadingIndicator,
+   visualizationSection,
+@@ -47,6 +48,7 @@ function init() {
+   // Get DOM elements
+   sessionInput = document.getElementById("sessionInput");
+   loadButton = document.getElementById("loadButton");
++  stripButton = document.getElementById("stripButton");
+   errorMessage = document.getElementById("errorMessage");
+   loadingIndicator = document.getElementById("loadingIndicator");
+   visualizationSection = document.getElementById("visualizationSection");
+@@ -64,6 +66,7 @@ function init() {
+ 
+   // Attach event listeners
+   loadButton.addEventListener("click", handleLoad);
++  if (stripButton) stripButton.addEventListener("click", handleStrip);
+   leftButton.addEventListener("click", handleLeftClick);
+   rightButton.addEventListener("click", handleRightClick);
+   turnInput.addEventListener("change", handleTurnInputChange);
+@@ -101,8 +104,9 @@ async function handleLoad() {
+     turnSlider.max = maxTurnDisplay;
+     turnInput.max = maxTurnDisplay;
+ 
+-    // Show visualization section
++    // Show visualization section and strip button
+     visualizationSection.classList.remove("hidden");
++    if (stripButton) stripButton.classList.remove("hidden");
+ 
+     // Render initial state
+     syncNavigation();
+@@ -117,6 +121,33 @@ async function handleLoad() {
+   }
+ }
+ 
++async function handleStrip() {
++  const sessionId = sessionInput.value.trim();
++  if (!sessionId) return;
++
++  const originalText = stripButton.textContent;
++  stripButton.disabled = true;
++  stripButton.textContent = "Stripping...";
++
++  try {
++    const res = await fetch(`/api/session/${sessionId}/strip`, { method: "POST" });
++    const data = await res.json();
++
++    if (data.success) {
++      alert(`Stripped ${data.toolCallsRemoved} tool calls and ${data.thinkingBlocksRemoved} thinking blocks.\nBackup: ${data.backupPath}`);
++      // Reload the session to show updated data
++      handleLoad();
++    } else {
++      alert(`Error: ${data.error}`);
++    }
++  } catch (err) {
++    alert(`Failed: ${err.message}`);
++  } finally {
++    stripButton.disabled = false;
++    stripButton.textContent = originalText;
++  }
++}
++
+ function handleLeftClick() {
+   if (!sessionData) return;
+   if (currentTurn > 0) {
+diff --git a/src/routes/session-strip.ts b/src/routes/session-strip.ts
+new file mode 100644
+index 0000000..c58fd61
+--- /dev/null
++++ b/src/routes/session-strip.ts
+@@ -0,0 +1,88 @@
++import { Router, Request, Response } from "express";
++import { readFile, writeFile, copyFile } from "fs/promises";
++import path from "path";
++import {
++  findSessionFile,
++  parseSession,
++  applyRemovals,
++} from "../services/session-clone.js";
++import type { SessionEntry } from "../types.js";
++
++const router = Router();
++
++/**
++ * POST /api/session/:id/strip
++ * Backs up the session then removes all tool calls and thinking blocks in-place
++ */
++router.post("/:id/strip", async (req: Request, res: Response) => {
++  const { id } = req.params;
++
++  try {
++    // Find session file
++    const sessionPath = await findSessionFile(id);
++
++    // Create backup with timestamp
++    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
++    const backupPath = sessionPath.replace(".jsonl", `.backup-${timestamp}.jsonl`);
++    await copyFile(sessionPath, backupPath);
++
++    // Read and parse session
++    const content = await readFile(sessionPath, "utf-8");
++    const entries = parseSession(content);
++
++    // Apply 100% tool removal and 100% thinking removal
++    const { toolCallsRemoved, thinkingBlocksRemoved } = applyRemovals(entries, {
++      toolRemoval: "100",
++      thinkingRemoval: "100",
++    });
++
++    // Write back in place
++    const output = entries.map((e) => JSON.stringify(e)).join("\n") + "\n";
++    await writeFile(sessionPath, output, "utf-8");
++
++    res.json({
++      success: true,
++      sessionId: id,
++      backupPath: path.basename(backupPath),
++      toolCallsRemoved,
++      thinkingBlocksRemoved,
++    });
++  } catch (error) {
++    const message = error instanceof Error ? error.message : "Unknown error";
++    res.status(500).json({ success: false, error: message });
++  }
++});
++
++/**
++ * GET /api/session/:id/backups
++ * List all backups for a session
++ */
++router.get("/:id/backups", async (req: Request, res: Response) => {
++  const { id } = req.params;
++
++  try {
++    const sessionPath = await findSessionFile(id);
++    const dir = path.dirname(sessionPath);
++    const { readdir, stat } = await import("fs/promises");
++
++    const files = await readdir(dir);
++    const backups = files
++      .filter((f) => f.startsWith(id) && f.includes(".backup-"))
++      .map(async (f) => {
++        const fullPath = path.join(dir, f);
++        const stats = await stat(fullPath);
++        return {
++          filename: f,
++          createdAt: stats.mtime.toISOString(),
++          sizeBytes: stats.size,
++        };
++      });
++
++    res.json({ backups: await Promise.all(backups) });
++  } catch (error) {
++    const message = error instanceof Error ? error.message : "Unknown error";
++    res.status(500).json({ success: false, error: message });
++  }
++});
++
++export default router;
+diff --git a/src/server.ts b/src/server.ts
+index cc2506b..e81463e 100644
+--- a/src/server.ts
++++ b/src/server.ts
+@@ -17,6 +17,7 @@ import { sessionBrowserRouter } from "./routes/session-browser.js";
+ import { sessionResolverRouter } from "./routes/session-resolver.js";
+ import { copilotVisualizationRouter } from "./routes/copilot-visualization.js";
+ import { copilotCloneRouter } from "./routes/copilot-clone.js";
++import sessionStripRouter from "./routes/session-strip.js";
+ import { config } from "./config.js";
+ 
+ const app = express();
+@@ -47,6 +48,7 @@ app.use(sessionBrowserRouter);
+ app.use(sessionResolverRouter);
+ app.use(copilotVisualizationRouter);
+ app.use(copilotCloneRouter);
++app.use("/api/session", sessionStripRouter);
+ 
+ // Server-rendered pages (legacy routes still work)
+ app.get("/visualize", (req, res) => {
+diff --git a/views/pages/session-detail.ejs b/views/pages/session-detail.ejs
+index bbfa3e5..177023e 100644
+--- a/views/pages/session-detail.ejs
++++ b/views/pages/session-detail.ejs
+@@ -22,6 +22,9 @@
+         <button id="loadButton" aria-label="Load session" class="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+           Load
+         </button>
++        <button id="stripButton" aria-label="Strip tool calls" class="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600 hidden">
++          Strip Tools
++        </button>
+       </div>
+       <div id="errorMessage" role="alert" class="mt-2 text-red-500 hidden"></div>
+       <div id="loadingIndicator" aria-live="polite" class="mt-2 text-blue-500 hidden">Loading session...</div>
+-- 
+2.49.0
+
