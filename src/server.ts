@@ -61,8 +61,10 @@ app.get("/session-detail", (req, res) => {
 
 export { app };
 
-// Start server if run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Start server if run directly (not imported as module)
+const isDirectRun = import.meta.url === `file://${process.argv[1]}` ||
+                    process.argv[1]?.endsWith('server.js');
+if (isDirectRun) {
   app.listen(config.port, () => {
     console.log(`Server running at http://localhost:${config.port}`);
   });

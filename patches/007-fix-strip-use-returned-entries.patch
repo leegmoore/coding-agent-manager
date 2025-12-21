@@ -1,0 +1,947 @@
+From d14370c0149a6fad65b8654958ef9aa36a0a1fa7 Mon Sep 17 00:00:00 2001
+From: leegmoore <lee.g.moore@gmail.com>
+Date: Sat, 20 Dec 2025 20:00:05 -0500
+Subject: [PATCH] fix: Use returned entries from applyRemovals in strip
+ endpoint
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Bug: strip endpoint was writing original entries instead of stripped entries.
+applyRemovals returns new array, doesn't mutate original.
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+---
+ patches/006-docs-project-setup-guide.patch | 897 +++++++++++++++++++++
+ src/routes/session-strip.ts                |   4 +-
+ 2 files changed, 899 insertions(+), 2 deletions(-)
+ create mode 100644 patches/006-docs-project-setup-guide.patch
+
+diff --git a/patches/006-docs-project-setup-guide.patch b/patches/006-docs-project-setup-guide.patch
+new file mode 100644
+index 0000000..99f48f0
+--- /dev/null
++++ b/patches/006-docs-project-setup-guide.patch
+@@ -0,0 +1,897 @@
++From 9912cb1fe9a22f9eb6ba1726df1ef3a2922c7db4 Mon Sep 17 00:00:00 2001
++From: leegmoore <lee.g.moore@gmail.com>
++Date: Sat, 20 Dec 2025 19:44:30 -0500
++Subject: [PATCH] docs: Add project setup guide for other repos
++MIME-Version: 1.0
++Content-Type: text/plain; charset=UTF-8
++Content-Transfer-Encoding: 8bit
++
++setup-cam-proj.md provides:
++- Prompt to give Claude in any project to set up CAM access
++- npm and bun script variants
++- CLAUDE.md section to add
++- Manual setup instructions
++- Troubleshooting guide
++
++🤖 Generated with [Claude Code](https://claude.com/claude-code)
++
++Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
++---
++ patches/005-feat-claude-md-pm2-port.patch | 748 ++++++++++++++++++++++
++ setup-cam-proj.md                         | 109 ++++
++ 2 files changed, 857 insertions(+)
++ create mode 100644 patches/005-feat-claude-md-pm2-port.patch
++ create mode 100644 setup-cam-proj.md
++
++diff --git a/patches/005-feat-claude-md-pm2-port.patch b/patches/005-feat-claude-md-pm2-port.patch
++new file mode 100644
++index 0000000..0be5a12
++--- /dev/null
+++++ b/patches/005-feat-claude-md-pm2-port.patch
++@@ -0,0 +1,748 @@
+++From 360031996eb6b4b341f6381b0e9425ee54d7031f Mon Sep 17 00:00:00 2001
+++From: leegmoore <lee.g.moore@gmail.com>
+++Date: Sat, 20 Dec 2025 19:39:56 -0500
+++Subject: [PATCH] feat: Add CLAUDE.md, pm2 scripts, port 7331
+++MIME-Version: 1.0
+++Content-Type: text/plain; charset=UTF-8
+++Content-Transfer-Encoding: 8bit
+++
+++- Remove strip-current endpoint (use session ID directly)
+++- Change default port from 3000 to 7331
+++- Add pm2 scripts: serve, serve:stop, serve:restart, serve:status, serve:logs
+++- Add strip script: npm run strip --id=<guid>
+++- Add CLAUDE.md with project overview and procedures
+++
+++🤖 Generated with [Claude Code](https://claude.com/claude-code)
+++
+++Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+++---
+++ CLAUDE.md                                     |  98 ++++
+++ package.json                                  |   6 +
+++ patches/004-feat-strip-current-endpoint.patch | 448 ++++++++++++++++++
+++ src/config.ts                                 |   2 +-
+++ src/routes/session-strip.ts                   |  96 ----
+++ src/server.ts                                 |   1 -
+++ 6 files changed, 553 insertions(+), 98 deletions(-)
+++ create mode 100644 CLAUDE.md
+++ create mode 100644 patches/004-feat-strip-current-endpoint.patch
+++
+++diff --git a/CLAUDE.md b/CLAUDE.md
+++new file mode 100644
+++index 0000000..91f1cbc
+++--- /dev/null
++++++ b/CLAUDE.md
+++@@ -0,0 +1,98 @@
++++# Coding Agent Manager
++++
++++A utility for managing Claude Code and GitHub Copilot session files. Provides tools for cloning sessions with tool call/thinking removal, message compression, and session visualization.
++++
++++## Directory Structure
++++
++++```
++++src/
++++├── server.ts              # Express entry point
++++├── config.ts              # Environment configuration (port 7331)
++++├── types.ts               # TypeScript interfaces
++++├── errors.ts              # Custom error classes
++++├── lib/                   # Core utilities
++++├── providers/             # LLM provider abstraction
++++├── routes/                # API endpoints
++++├── schemas/               # Zod validation
++++├── services/              # Business logic
++++└── sources/               # Session source abstraction (Claude/Copilot)
++++
++++public/js/
++++├── lib/                   # Pure functions (testable without DOM)
++++├── api/                   # Fetch wrapper
++++├── ui/                    # Loading states, notifications
++++└── pages/                 # Page orchestration
++++
++++views/pages/               # EJS templates
++++```
++++
++++## Key Documentation
++++
++++- [Session Format Spec](docs/reference/claude-code-session-storage-formats.md) - Claude Code session structure
++++- [Copilot Format Spec](docs/reference/github-copilot-session-storage-formats.md) - GitHub Copilot session structure
++++- [Product Brief](docs/PRODUCT-BRIEF.md) - Product overview
++++- [Technical Design](docs/TECHNICAL-DESIGN.md) - Architecture details
++++
++++## Running the Service
++++
++++The service runs on **port 7331** by default.
++++
++++### Development (with hot reload)
++++```bash
++++npm run dev
++++```
++++
++++### Production (via pm2)
++++```bash
++++npm run build              # Compile TypeScript to dist/
++++npm run serve              # Start via pm2
++++npm run serve:stop         # Stop the service
++++npm run serve:restart      # Restart after rebuild
++++npm run serve:status       # Check if running
++++npm run serve:logs         # Tail logs
++++```
++++
++++### macOS: Auto-start on boot
++++```bash
++++npm run serve              # Start the process first
++++pm2 save                   # Save current process list
++++pm2 startup                # Generates a command - run it with sudo
++++```
++++
++++## Tools & Procedures
++++
++++### Strip Tool Calls from a Session
++++
++++When the user provides a session GUID and asks to strip tool calls:
++++
++++```bash
++++npm run strip --id=<session-guid>
++++```
++++
++++Example:
++++```bash
++++npm run strip --id=abc12345-1234-5678-9abc-def012345678
++++```
++++
++++This will:
++++1. Create a backup of the session
++++2. Remove all tool calls (100%)
++++3. Remove all thinking blocks (100%)
++++4. Write changes in place
++++
++++### Web UI
++++
++++Access the web interface at `http://localhost:7331`:
++++- **Session Browser** (`/`) - Browse and manage sessions
++++- **Clone** (`/session-clone`) - Clone with removal/compression options
++++- **Visualize** (`/session-detail`) - Turn-by-turn session visualization
++++
++++### API Endpoints
++++
++++| Endpoint | Method | Description |
++++|----------|--------|-------------|
++++| `/api/session/:id/strip` | POST | Strip tools and thinking from session |
++++| `/api/session/:id/backups` | GET | List backups for a session |
++++| `/api/v2/clone` | POST | Clone with compression options |
++++| `/api/projects` | GET | List Claude projects |
++++| `/api/copilot/projects` | GET | List Copilot workspaces |
+++diff --git a/package.json b/package.json
+++index c93738a..cb985ab 100644
+++--- a/package.json
++++++ b/package.json
+++@@ -10,6 +10,12 @@
+++     "test": "vitest run",
+++     "test:watch": "vitest",
+++     "typecheck": "tsc --noEmit",
++++    "serve": "pm2 start dist/server.js --name coding-agent-manager",
++++    "serve:stop": "pm2 stop coding-agent-manager",
++++    "serve:restart": "pm2 restart coding-agent-manager",
++++    "serve:status": "pm2 status coding-agent-manager",
++++    "serve:logs": "pm2 logs coding-agent-manager",
++++    "strip": "curl -s -X POST http://localhost:7331/api/session/$npm_config_id/strip | node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(d.success ? 'Stripped '+d.toolCallsRemoved+' tools, '+d.thinkingBlocksRemoved+' thinking. Backup: '+d.backupPath : 'Error: '+d.error)\"",
+++     "export-snapshots": "node scripts/export-repo-snapshots.js",
+++     "c7:search": "f() { curl -s \"https://context7.com/api/v2/search?query=$1\" -H \"Authorization: Bearer $CONTEXT7_API_KEY\" | jq '.results[:5] | .[] | {id, title, description}'; }; f",
+++     "c7:docs": "f() { curl -s \"https://context7.com/api/v2/docs/code/$1${2:+?topic=$2}\" -H \"Authorization: Bearer $CONTEXT7_API_KEY\"; }; f",
+++diff --git a/patches/004-feat-strip-current-endpoint.patch b/patches/004-feat-strip-current-endpoint.patch
+++new file mode 100644
+++index 0000000..8362a09
+++--- /dev/null
++++++ b/patches/004-feat-strip-current-endpoint.patch
+++@@ -0,0 +1,448 @@
++++From 33bd850f9e067aa19bd93e861db9d8f50cd6fb81 Mon Sep 17 00:00:00 2001
++++From: leegmoore <lee.g.moore@gmail.com>
++++Date: Sat, 20 Dec 2025 19:12:14 -0500
++++Subject: [PATCH] feat: Add strip-current endpoint for easy project integration
++++MIME-Version: 1.0
++++Content-Type: text/plain; charset=UTF-8
++++Content-Transfer-Encoding: 8bit
++++
++++POST /api/strip-current?project=/path/to/project
++++- Finds most recently modified session for that project
++++- Strips it in place (with backup)
++++
++++Add to any project's package.json:
++++  "scripts": {
++++    "strip": "curl -X POST \"http://localhost:3000/api/strip-current?project=$(pwd)\""
++++  }
++++
++++Then tell any Claude agent: "npm run strip"
++++
++++🤖 Generated with [Claude Code](https://claude.com/claude-code)
++++
++++Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
++++---
++++ patches/003-feat-add-strip-button.patch | 283 ++++++++++++++++++++++++
++++ src/routes/session-strip.ts             |  96 +++++++-
++++ src/server.ts                           |   1 +
++++ 3 files changed, 379 insertions(+), 1 deletion(-)
++++ create mode 100644 patches/003-feat-add-strip-button.patch
++++
++++diff --git a/patches/003-feat-add-strip-button.patch b/patches/003-feat-add-strip-button.patch
++++new file mode 100644
++++index 0000000..d220f7b
++++--- /dev/null
+++++++ b/patches/003-feat-add-strip-button.patch
++++@@ -0,0 +1,283 @@
+++++From 20f756bae64c08fd12a673983d28646acd7d2f14 Mon Sep 17 00:00:00 2001
+++++From: leegmoore <lee.g.moore@gmail.com>
+++++Date: Sat, 20 Dec 2025 18:55:39 -0500
+++++Subject: [PATCH] feat: Add 1-click Strip button to session browser and detail
+++++ pages
+++++MIME-Version: 1.0
+++++Content-Type: text/plain; charset=UTF-8
+++++Content-Transfer-Encoding: 8bit
+++++
+++++- POST /api/session/:id/strip endpoint
+++++- Backs up session before stripping
+++++- Removes 100% tool calls + 100% thinking in place
+++++- Strip button on session browser (red, next to Clone)
+++++- Strip button on session detail (appears after loading)
+++++
+++++🤖 Generated with [Claude Code](https://claude.com/claude-code)
+++++
+++++Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+++++---
+++++ public/js/pages/session-browser.js | 27 +++++++++
+++++ public/js/pages/session-detail.js  | 33 ++++++++++-
+++++ src/routes/session-strip.ts        | 88 ++++++++++++++++++++++++++++++
+++++ src/server.ts                      |  2 +
+++++ views/pages/session-detail.ejs     |  3 +
+++++ 5 files changed, 152 insertions(+), 1 deletion(-)
+++++ create mode 100644 src/routes/session-strip.ts
+++++
+++++diff --git a/public/js/pages/session-browser.js b/public/js/pages/session-browser.js
+++++index 12e7c77..e8fba9f 100644
+++++--- a/public/js/pages/session-browser.js
++++++++ b/public/js/pages/session-browser.js
+++++@@ -183,6 +183,8 @@ class SessionBrowserController {
+++++           ${s.turnCount}
+++++         </td>
+++++         <td class="px-4 py-3 whitespace-nowrap">
++++++          <button class="strip-btn px-2 py-1 text-sm bg-red-100 hover:bg-red-200 rounded mr-1"
++++++                  title="Strip all tool calls and thinking (backs up first)">Strip</button>
+++++           <button class="clone-btn px-2 py-1 text-sm bg-blue-100 hover:bg-blue-200 rounded mr-1"
+++++                   title="Clone session">Clone</button>
+++++           <button class="visualize-btn px-2 py-1 text-sm bg-purple-100 hover:bg-purple-200 rounded"
+++++@@ -233,6 +235,9 @@ class SessionBrowserController {
+++++       if (e.target.classList.contains("session-id")) {
+++++         e.stopPropagation();
+++++         this.copySessionId(sessionId);
++++++      } else if (e.target.classList.contains("strip-btn")) {
++++++        e.stopPropagation();
++++++        this.stripSession(sessionId, e.target);
+++++       } else if (e.target.classList.contains("clone-btn")) {
+++++         e.stopPropagation();
+++++         window.location.href = this.getCloneUrl(sessionId, source);
+++++@@ -274,6 +279,28 @@ class SessionBrowserController {
+++++     }
+++++   }
+++++ 
++++++  async stripSession(sessionId, button) {
++++++    const originalText = button.textContent;
++++++    button.disabled = true;
++++++    button.textContent = "...";
++++++
++++++    try {
++++++      const res = await fetch(`/api/session/${sessionId}/strip`, { method: "POST" });
++++++      const data = await res.json();
++++++
++++++      if (data.success) {
++++++        this.showToast(`Stripped ${data.toolCallsRemoved} tools, ${data.thinkingBlocksRemoved} thinking blocks`);
++++++      } else {
++++++        this.showToast(`Error: ${data.error}`);
++++++      }
++++++    } catch (err) {
++++++      this.showToast(`Failed: ${err.message}`);
++++++    } finally {
++++++      button.disabled = false;
++++++      button.textContent = originalText;
++++++    }
++++++  }
++++++
+++++   updateSortIndicators() {
+++++     document.querySelectorAll("[data-sort]").forEach(header => {
+++++       const indicator = header.querySelector(".sort-indicator") || document.createElement("span");
+++++diff --git a/public/js/pages/session-detail.js b/public/js/pages/session-detail.js
+++++index f1d1cbb..23548e8 100644
+++++--- a/public/js/pages/session-detail.js
++++++++ b/public/js/pages/session-detail.js
+++++@@ -24,6 +24,7 @@ let currentScale = 200;
+++++ // DOM elements
+++++ let sessionInput,
+++++   loadButton,
++++++  stripButton,
+++++   errorMessage,
+++++   loadingIndicator,
+++++   visualizationSection,
+++++@@ -47,6 +48,7 @@ function init() {
+++++   // Get DOM elements
+++++   sessionInput = document.getElementById("sessionInput");
+++++   loadButton = document.getElementById("loadButton");
++++++  stripButton = document.getElementById("stripButton");
+++++   errorMessage = document.getElementById("errorMessage");
+++++   loadingIndicator = document.getElementById("loadingIndicator");
+++++   visualizationSection = document.getElementById("visualizationSection");
+++++@@ -64,6 +66,7 @@ function init() {
+++++ 
+++++   // Attach event listeners
+++++   loadButton.addEventListener("click", handleLoad);
++++++  if (stripButton) stripButton.addEventListener("click", handleStrip);
+++++   leftButton.addEventListener("click", handleLeftClick);
+++++   rightButton.addEventListener("click", handleRightClick);
+++++   turnInput.addEventListener("change", handleTurnInputChange);
+++++@@ -101,8 +104,9 @@ async function handleLoad() {
+++++     turnSlider.max = maxTurnDisplay;
+++++     turnInput.max = maxTurnDisplay;
+++++ 
+++++-    // Show visualization section
++++++    // Show visualization section and strip button
+++++     visualizationSection.classList.remove("hidden");
++++++    if (stripButton) stripButton.classList.remove("hidden");
+++++ 
+++++     // Render initial state
+++++     syncNavigation();
+++++@@ -117,6 +121,33 @@ async function handleLoad() {
+++++   }
+++++ }
+++++ 
++++++async function handleStrip() {
++++++  const sessionId = sessionInput.value.trim();
++++++  if (!sessionId) return;
++++++
++++++  const originalText = stripButton.textContent;
++++++  stripButton.disabled = true;
++++++  stripButton.textContent = "Stripping...";
++++++
++++++  try {
++++++    const res = await fetch(`/api/session/${sessionId}/strip`, { method: "POST" });
++++++    const data = await res.json();
++++++
++++++    if (data.success) {
++++++      alert(`Stripped ${data.toolCallsRemoved} tool calls and ${data.thinkingBlocksRemoved} thinking blocks.\nBackup: ${data.backupPath}`);
++++++      // Reload the session to show updated data
++++++      handleLoad();
++++++    } else {
++++++      alert(`Error: ${data.error}`);
++++++    }
++++++  } catch (err) {
++++++    alert(`Failed: ${err.message}`);
++++++  } finally {
++++++    stripButton.disabled = false;
++++++    stripButton.textContent = originalText;
++++++  }
++++++}
++++++
+++++ function handleLeftClick() {
+++++   if (!sessionData) return;
+++++   if (currentTurn > 0) {
+++++diff --git a/src/routes/session-strip.ts b/src/routes/session-strip.ts
+++++new file mode 100644
+++++index 0000000..c58fd61
+++++--- /dev/null
++++++++ b/src/routes/session-strip.ts
+++++@@ -0,0 +1,88 @@
++++++import { Router, Request, Response } from "express";
++++++import { readFile, writeFile, copyFile } from "fs/promises";
++++++import path from "path";
++++++import {
++++++  findSessionFile,
++++++  parseSession,
++++++  applyRemovals,
++++++} from "../services/session-clone.js";
++++++import type { SessionEntry } from "../types.js";
++++++
++++++const router = Router();
++++++
++++++/**
++++++ * POST /api/session/:id/strip
++++++ * Backs up the session then removes all tool calls and thinking blocks in-place
++++++ */
++++++router.post("/:id/strip", async (req: Request, res: Response) => {
++++++  const { id } = req.params;
++++++
++++++  try {
++++++    // Find session file
++++++    const sessionPath = await findSessionFile(id);
++++++
++++++    // Create backup with timestamp
++++++    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
++++++    const backupPath = sessionPath.replace(".jsonl", `.backup-${timestamp}.jsonl`);
++++++    await copyFile(sessionPath, backupPath);
++++++
++++++    // Read and parse session
++++++    const content = await readFile(sessionPath, "utf-8");
++++++    const entries = parseSession(content);
++++++
++++++    // Apply 100% tool removal and 100% thinking removal
++++++    const { toolCallsRemoved, thinkingBlocksRemoved } = applyRemovals(entries, {
++++++      toolRemoval: "100",
++++++      thinkingRemoval: "100",
++++++    });
++++++
++++++    // Write back in place
++++++    const output = entries.map((e) => JSON.stringify(e)).join("\n") + "\n";
++++++    await writeFile(sessionPath, output, "utf-8");
++++++
++++++    res.json({
++++++      success: true,
++++++      sessionId: id,
++++++      backupPath: path.basename(backupPath),
++++++      toolCallsRemoved,
++++++      thinkingBlocksRemoved,
++++++    });
++++++  } catch (error) {
++++++    const message = error instanceof Error ? error.message : "Unknown error";
++++++    res.status(500).json({ success: false, error: message });
++++++  }
++++++});
++++++
++++++/**
++++++ * GET /api/session/:id/backups
++++++ * List all backups for a session
++++++ */
++++++router.get("/:id/backups", async (req: Request, res: Response) => {
++++++  const { id } = req.params;
++++++
++++++  try {
++++++    const sessionPath = await findSessionFile(id);
++++++    const dir = path.dirname(sessionPath);
++++++    const { readdir, stat } = await import("fs/promises");
++++++
++++++    const files = await readdir(dir);
++++++    const backups = files
++++++      .filter((f) => f.startsWith(id) && f.includes(".backup-"))
++++++      .map(async (f) => {
++++++        const fullPath = path.join(dir, f);
++++++        const stats = await stat(fullPath);
++++++        return {
++++++          filename: f,
++++++          createdAt: stats.mtime.toISOString(),
++++++          sizeBytes: stats.size,
++++++        };
++++++      });
++++++
++++++    res.json({ backups: await Promise.all(backups) });
++++++  } catch (error) {
++++++    const message = error instanceof Error ? error.message : "Unknown error";
++++++    res.status(500).json({ success: false, error: message });
++++++  }
++++++});
++++++
++++++export default router;
+++++diff --git a/src/server.ts b/src/server.ts
+++++index cc2506b..e81463e 100644
+++++--- a/src/server.ts
++++++++ b/src/server.ts
+++++@@ -17,6 +17,7 @@ import { sessionBrowserRouter } from "./routes/session-browser.js";
+++++ import { sessionResolverRouter } from "./routes/session-resolver.js";
+++++ import { copilotVisualizationRouter } from "./routes/copilot-visualization.js";
+++++ import { copilotCloneRouter } from "./routes/copilot-clone.js";
++++++import sessionStripRouter from "./routes/session-strip.js";
+++++ import { config } from "./config.js";
+++++ 
+++++ const app = express();
+++++@@ -47,6 +48,7 @@ app.use(sessionBrowserRouter);
+++++ app.use(sessionResolverRouter);
+++++ app.use(copilotVisualizationRouter);
+++++ app.use(copilotCloneRouter);
++++++app.use("/api/session", sessionStripRouter);
+++++ 
+++++ // Server-rendered pages (legacy routes still work)
+++++ app.get("/visualize", (req, res) => {
+++++diff --git a/views/pages/session-detail.ejs b/views/pages/session-detail.ejs
+++++index bbfa3e5..177023e 100644
+++++--- a/views/pages/session-detail.ejs
++++++++ b/views/pages/session-detail.ejs
+++++@@ -22,6 +22,9 @@
+++++         <button id="loadButton" aria-label="Load session" class="px-6 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+++++           Load
+++++         </button>
++++++        <button id="stripButton" aria-label="Strip tool calls" class="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600 hidden">
++++++          Strip Tools
++++++        </button>
+++++       </div>
+++++       <div id="errorMessage" role="alert" class="mt-2 text-red-500 hidden"></div>
+++++       <div id="loadingIndicator" aria-live="polite" class="mt-2 text-blue-500 hidden">Loading session...</div>
+++++-- 
+++++2.49.0
+++++
++++diff --git a/src/routes/session-strip.ts b/src/routes/session-strip.ts
++++index c58fd61..871fe4d 100644
++++--- a/src/routes/session-strip.ts
+++++++ b/src/routes/session-strip.ts
++++@@ -1,5 +1,5 @@
++++ import { Router, Request, Response } from "express";
++++-import { readFile, writeFile, copyFile } from "fs/promises";
+++++import { readFile, writeFile, copyFile, readdir, stat } from "fs/promises";
++++ import path from "path";
++++ import {
++++   findSessionFile,
++++@@ -7,9 +7,103 @@ import {
++++   applyRemovals,
++++ } from "../services/session-clone.js";
++++ import type { SessionEntry } from "../types.js";
+++++import { config } from "../config.js";
++++ 
++++ const router = Router();
++++ 
+++++/**
+++++ * Encode a project path the same way Claude Code does
+++++ * Replace path separators with hyphens, remove leading/trailing hyphens
+++++ */
+++++function encodeProjectPath(projectPath: string): string {
+++++  return projectPath.replace(/\//g, "-").replace(/^-+|-+$/g, "");
+++++}
+++++
+++++/**
+++++ * Find the most recently modified session in a project folder
+++++ */
+++++async function findMostRecentSession(projectPath: string): Promise<{ sessionId: string; filePath: string } | null> {
+++++  const encodedPath = encodeProjectPath(projectPath);
+++++  const projectDir = path.join(config.projectsDir, encodedPath);
+++++
+++++  try {
+++++    const files = await readdir(projectDir);
+++++    const jsonlFiles = files.filter(f => f.endsWith(".jsonl") && !f.includes(".backup-"));
+++++
+++++    if (jsonlFiles.length === 0) return null;
+++++
+++++    // Find most recently modified
+++++    let mostRecent: { file: string; mtime: number } | null = null;
+++++    for (const file of jsonlFiles) {
+++++      const filePath = path.join(projectDir, file);
+++++      const stats = await stat(filePath);
+++++      if (!mostRecent || stats.mtimeMs > mostRecent.mtime) {
+++++        mostRecent = { file, mtime: stats.mtimeMs };
+++++      }
+++++    }
+++++
+++++    if (!mostRecent) return null;
+++++
+++++    const sessionId = mostRecent.file.replace(".jsonl", "");
+++++    return { sessionId, filePath: path.join(projectDir, mostRecent.file) };
+++++  } catch {
+++++    return null;
+++++  }
+++++}
+++++
+++++/**
+++++ * POST /api/strip-current
+++++ * Strip the most recent session for a given project path
+++++ * Query params: project (required) - absolute path to project
+++++ */
+++++router.post("/strip-current", async (req: Request, res: Response) => {
+++++  const projectPath = req.query.project as string;
+++++
+++++  if (!projectPath) {
+++++    res.status(400).json({ success: false, error: "Missing 'project' query parameter" });
+++++    return;
+++++  }
+++++
+++++  const session = await findMostRecentSession(projectPath);
+++++  if (!session) {
+++++    res.status(404).json({ success: false, error: `No sessions found for project: ${projectPath}` });
+++++    return;
+++++  }
+++++
+++++  try {
+++++    // Create backup with timestamp
+++++    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+++++    const backupPath = session.filePath.replace(".jsonl", `.backup-${timestamp}.jsonl`);
+++++    await copyFile(session.filePath, backupPath);
+++++
+++++    // Read and parse session
+++++    const content = await readFile(session.filePath, "utf-8");
+++++    const entries = parseSession(content);
+++++
+++++    // Apply 100% tool removal and 100% thinking removal
+++++    const { toolCallsRemoved, thinkingBlocksRemoved } = applyRemovals(entries, {
+++++      toolRemoval: "100",
+++++      thinkingRemoval: "100",
+++++    });
+++++
+++++    // Write back in place
+++++    const output = entries.map((e) => JSON.stringify(e)).join("\n") + "\n";
+++++    await writeFile(session.filePath, output, "utf-8");
+++++
+++++    res.json({
+++++      success: true,
+++++      sessionId: session.sessionId,
+++++      project: projectPath,
+++++      backupPath: path.basename(backupPath),
+++++      toolCallsRemoved,
+++++      thinkingBlocksRemoved,
+++++    });
+++++  } catch (error) {
+++++    const message = error instanceof Error ? error.message : "Unknown error";
+++++    res.status(500).json({ success: false, error: message });
+++++  }
+++++});
+++++
++++ /**
++++  * POST /api/session/:id/strip
++++  * Backs up the session then removes all tool calls and thinking blocks in-place
++++diff --git a/src/server.ts b/src/server.ts
++++index e81463e..d0d2548 100644
++++--- a/src/server.ts
+++++++ b/src/server.ts
++++@@ -49,6 +49,7 @@ app.use(sessionResolverRouter);
++++ app.use(copilotVisualizationRouter);
++++ app.use(copilotCloneRouter);
++++ app.use("/api/session", sessionStripRouter);
+++++app.use("/api", sessionStripRouter);  // Also mount at /api for strip-current
++++ 
++++ // Server-rendered pages (legacy routes still work)
++++ app.get("/visualize", (req, res) => {
++++-- 
++++2.49.0
++++
+++diff --git a/src/config.ts b/src/config.ts
+++index f38a9ec..2ad519a 100644
+++--- a/src/config.ts
++++++ b/src/config.ts
+++@@ -6,7 +6,7 @@ export const config = {
+++   get claudeDir() {
+++     return process.env.CLAUDE_DIR || path.join(os.homedir(), ".claude");
+++   },
+++-  port: parseInt(process.env.PORT || "3000", 10),
++++  port: parseInt(process.env.PORT || "7331", 10),
+++   get projectsDir() {
+++     return path.join(this.claudeDir, "projects");
+++   },
+++diff --git a/src/routes/session-strip.ts b/src/routes/session-strip.ts
+++index 871fe4d..ae6fa3e 100644
+++--- a/src/routes/session-strip.ts
++++++ b/src/routes/session-strip.ts
+++@@ -6,104 +6,9 @@ import {
+++   parseSession,
+++   applyRemovals,
+++ } from "../services/session-clone.js";
+++-import type { SessionEntry } from "../types.js";
+++-import { config } from "../config.js";
+++ 
+++ const router = Router();
+++ 
+++-/**
+++- * Encode a project path the same way Claude Code does
+++- * Replace path separators with hyphens, remove leading/trailing hyphens
+++- */
+++-function encodeProjectPath(projectPath: string): string {
+++-  return projectPath.replace(/\//g, "-").replace(/^-+|-+$/g, "");
+++-}
+++-
+++-/**
+++- * Find the most recently modified session in a project folder
+++- */
+++-async function findMostRecentSession(projectPath: string): Promise<{ sessionId: string; filePath: string } | null> {
+++-  const encodedPath = encodeProjectPath(projectPath);
+++-  const projectDir = path.join(config.projectsDir, encodedPath);
+++-
+++-  try {
+++-    const files = await readdir(projectDir);
+++-    const jsonlFiles = files.filter(f => f.endsWith(".jsonl") && !f.includes(".backup-"));
+++-
+++-    if (jsonlFiles.length === 0) return null;
+++-
+++-    // Find most recently modified
+++-    let mostRecent: { file: string; mtime: number } | null = null;
+++-    for (const file of jsonlFiles) {
+++-      const filePath = path.join(projectDir, file);
+++-      const stats = await stat(filePath);
+++-      if (!mostRecent || stats.mtimeMs > mostRecent.mtime) {
+++-        mostRecent = { file, mtime: stats.mtimeMs };
+++-      }
+++-    }
+++-
+++-    if (!mostRecent) return null;
+++-
+++-    const sessionId = mostRecent.file.replace(".jsonl", "");
+++-    return { sessionId, filePath: path.join(projectDir, mostRecent.file) };
+++-  } catch {
+++-    return null;
+++-  }
+++-}
+++-
+++-/**
+++- * POST /api/strip-current
+++- * Strip the most recent session for a given project path
+++- * Query params: project (required) - absolute path to project
+++- */
+++-router.post("/strip-current", async (req: Request, res: Response) => {
+++-  const projectPath = req.query.project as string;
+++-
+++-  if (!projectPath) {
+++-    res.status(400).json({ success: false, error: "Missing 'project' query parameter" });
+++-    return;
+++-  }
+++-
+++-  const session = await findMostRecentSession(projectPath);
+++-  if (!session) {
+++-    res.status(404).json({ success: false, error: `No sessions found for project: ${projectPath}` });
+++-    return;
+++-  }
+++-
+++-  try {
+++-    // Create backup with timestamp
+++-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+++-    const backupPath = session.filePath.replace(".jsonl", `.backup-${timestamp}.jsonl`);
+++-    await copyFile(session.filePath, backupPath);
+++-
+++-    // Read and parse session
+++-    const content = await readFile(session.filePath, "utf-8");
+++-    const entries = parseSession(content);
+++-
+++-    // Apply 100% tool removal and 100% thinking removal
+++-    const { toolCallsRemoved, thinkingBlocksRemoved } = applyRemovals(entries, {
+++-      toolRemoval: "100",
+++-      thinkingRemoval: "100",
+++-    });
+++-
+++-    // Write back in place
+++-    const output = entries.map((e) => JSON.stringify(e)).join("\n") + "\n";
+++-    await writeFile(session.filePath, output, "utf-8");
+++-
+++-    res.json({
+++-      success: true,
+++-      sessionId: session.sessionId,
+++-      project: projectPath,
+++-      backupPath: path.basename(backupPath),
+++-      toolCallsRemoved,
+++-      thinkingBlocksRemoved,
+++-    });
+++-  } catch (error) {
+++-    const message = error instanceof Error ? error.message : "Unknown error";
+++-    res.status(500).json({ success: false, error: message });
+++-  }
+++-});
+++-
+++ /**
+++  * POST /api/session/:id/strip
+++  * Backs up the session then removes all tool calls and thinking blocks in-place
+++@@ -157,7 +62,6 @@ router.get("/:id/backups", async (req: Request, res: Response) => {
+++   try {
+++     const sessionPath = await findSessionFile(id);
+++     const dir = path.dirname(sessionPath);
+++-    const { readdir, stat } = await import("fs/promises");
+++ 
+++     const files = await readdir(dir);
+++     const backups = files
+++diff --git a/src/server.ts b/src/server.ts
+++index d0d2548..e81463e 100644
+++--- a/src/server.ts
++++++ b/src/server.ts
+++@@ -49,7 +49,6 @@ app.use(sessionResolverRouter);
+++ app.use(copilotVisualizationRouter);
+++ app.use(copilotCloneRouter);
+++ app.use("/api/session", sessionStripRouter);
+++-app.use("/api", sessionStripRouter);  // Also mount at /api for strip-current
+++ 
+++ // Server-rendered pages (legacy routes still work)
+++ app.get("/visualize", (req, res) => {
+++-- 
+++2.49.0
+++
++diff --git a/setup-cam-proj.md b/setup-cam-proj.md
++new file mode 100644
++index 0000000..d09d1a2
++--- /dev/null
+++++ b/setup-cam-proj.md
++@@ -0,0 +1,109 @@
+++# Coding Agent Manager - Project Setup
+++
+++Give this prompt to a Claude agent in any project to set up access to the Coding Agent Manager tool.
+++
+++---
+++
+++## Prompt for Claude
+++
+++Copy and paste this to your Claude agent:
+++
+++---
+++
+++**Set up access to the Coding Agent Manager service.**
+++
+++The Coding Agent Manager runs on `http://localhost:7331` and provides a tool to strip tool calls and thinking blocks from Claude Code sessions.
+++
+++### 1. Add to package.json
+++
+++Add this script to the project's `package.json`:
+++
+++**For npm:**
+++```json
+++{
+++  "scripts": {
+++    "strip": "curl -s -X POST http://localhost:7331/api/session/$npm_config_id/strip | node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(d.success ? 'Stripped '+d.toolCallsRemoved+' tools, '+d.thinkingBlocksRemoved+' thinking. Backup: '+d.backupPath : 'Error: '+d.error)\""
+++  }
+++}
+++```
+++
+++**For bun (in package.json):**
+++```json
+++{
+++  "scripts": {
+++    "strip": "curl -s -X POST http://localhost:7331/api/session/$1/strip | node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(d.success ? 'Stripped '+d.toolCallsRemoved+' tools, '+d.thinkingBlocksRemoved+' thinking. Backup: '+d.backupPath : 'Error: '+d.error)\""
+++  }
+++}
+++```
+++
+++### 2. Add to CLAUDE.md
+++
+++Add this section to the project's `CLAUDE.md` (create if it doesn't exist):
+++
+++```markdown
+++## Session Management
+++
+++### Strip Tool Calls
+++
+++When the user provides a session GUID and asks to strip tool calls from the session:
+++
+++**npm:**
+++```bash
+++npm run strip --id=<session-guid>
+++```
+++
+++**bun:**
+++```bash
+++bun run strip <session-guid>
+++```
+++
+++This removes all tool calls and thinking blocks from the session, creating a backup first. Use this to reduce context size in long sessions.
+++```
+++
+++---
+++
+++## Manual Setup Reference
+++
+++If you're setting this up manually instead of via Claude:
+++
+++### Step 1: Verify the service is running
+++
+++```bash
+++curl http://localhost:7331/health
+++# Should return: {"status":"ok","timestamp":"..."}
+++```
+++
+++### Step 2: Add the script
+++
+++Edit `package.json` and add the strip script (see above for npm vs bun versions).
+++
+++### Step 3: Update CLAUDE.md
+++
+++Add the session management section so agents know how to use it.
+++
+++### Step 4: Test it
+++
+++```bash
+++# Get your session ID from Claude Code status line, then:
+++npm run strip --id=your-session-guid-here
+++# or
+++bun run strip your-session-guid-here
+++```
+++
+++---
+++
+++## Troubleshooting
+++
+++**"Connection refused"** - The Coding Agent Manager service isn't running. Start it:
+++```bash
+++cd /path/to/coding-agent-manager
+++npm run serve
+++```
+++
+++**"Session not found"** - The session GUID doesn't exist. Check the ID is correct.
+++
+++**"Error: Unknown error"** - Check the service logs:
+++```bash
+++cd /path/to/coding-agent-manager
+++npm run serve:logs
+++```
++-- 
++2.49.0
++
+diff --git a/src/routes/session-strip.ts b/src/routes/session-strip.ts
+index ae6fa3e..d3a5416 100644
+--- a/src/routes/session-strip.ts
++++ b/src/routes/session-strip.ts
+@@ -30,13 +30,13 @@ router.post("/:id/strip", async (req: Request, res: Response) => {
+     const entries = parseSession(content);
+ 
+     // Apply 100% tool removal and 100% thinking removal
+-    const { toolCallsRemoved, thinkingBlocksRemoved } = applyRemovals(entries, {
++    const { entries: strippedEntries, toolCallsRemoved, thinkingBlocksRemoved } = applyRemovals(entries, {
+       toolRemoval: "100",
+       thinkingRemoval: "100",
+     });
+ 
+     // Write back in place
+-    const output = entries.map((e) => JSON.stringify(e)).join("\n") + "\n";
++    const output = strippedEntries.map((e) => JSON.stringify(e)).join("\n") + "\n";
+     await writeFile(sessionPath, output, "utf-8");
+ 
+     res.json({
+-- 
+2.49.0
+
