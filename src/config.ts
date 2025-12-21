@@ -6,7 +6,7 @@ export const config = {
   get claudeDir() {
     return process.env.CLAUDE_DIR || path.join(os.homedir(), ".claude");
   },
-  port: parseInt(process.env.PORT || "3000", 10),
+  port: parseInt(process.env.PORT || "7331", 10),
   get projectsDir() {
     return path.join(this.claudeDir, "projects");
   },

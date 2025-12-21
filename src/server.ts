@@ -49,7 +49,6 @@ app.use(sessionResolverRouter);
 app.use(copilotVisualizationRouter);
 app.use(copilotCloneRouter);
 app.use("/api/session", sessionStripRouter);
-app.use("/api", sessionStripRouter);  // Also mount at /api for strip-current
 
 // Server-rendered pages (legacy routes still work)
 app.get("/visualize", (req, res) => {
