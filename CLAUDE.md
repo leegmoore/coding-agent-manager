@@ -66,21 +66,31 @@ Access the web interface at `http://localhost:7331`:
 - **Clone** (`/session-clone`) - Clone with removal/compression options
 - **Visualize** (`/session-detail`) - Turn-by-turn session visualization
 
-## Cloning Sessions
+## Quick Clean (Context Reduction)
 
-To reduce context in a session:
+When the user provides a session GUID and asks to reduce context or clean the session:
+
+```bash
+npm run quick-clean --id=<session-guid>
+```
+
+This clones the session with 100% tool removal and 100% thinking removal. Returns a command like:
+```
+claude --resume <new-session-id>
+```
+
+Show this command to the user. They must exit the current session and run that command to continue with the cleaned context.
+
+## Web UI Cloning
+
+For more control (custom removal percentages, compression):
 
 1. Open the Session Browser at `http://localhost:7331`
 2. Select a project and find the session
 3. Click **Clone**
-4. Configure removal options:
-   - Tool Call Removal: 50%, 75%, 90%, or 100%
-   - Thinking blocks are always removed 100%
-   - Optionally configure compression bands
+4. Configure removal options
 5. Clone creates a new session file
-6. Exit your current session and resume the cloned one
-
-**Important:** Cloning creates a new session. You must exit your current session and resume the cloned one for changes to take effect.
+6. Exit and resume the cloned session
 
 ## API Endpoints
 
