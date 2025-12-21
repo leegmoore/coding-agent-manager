@@ -14,7 +14,7 @@ Add the following to this project to enable quick context cleaning via the Codin
 ```json
 {
   "scripts": {
-    "quick-clean": "curl -s -X POST http://localhost:7331/api/v2/clone -H 'Content-Type: application/json' -d '{\"sessionId\":\"'$npm_config_id'\",\"toolRemoval\":\"100\",\"thinkingRemoval\":\"100\"}' | node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(d.success){const id=d.outputPath.split('/').pop().replace('.jsonl',''); console.log('claude --resume '+id)}else{console.log('Error: '+(d.error||'unknown'))}\""
+    "quick-clean": "curl -s -X POST http://localhost:7331/api/v2/clone -H 'Content-Type: application/json' -d '{\"sessionId\":\"'$npm_config_id'\",\"toolRemoval\":\"100\",\"thinkingRemoval\":\"100\"}' | node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(d.success){const id=d.outputPath.split('/').pop().replace('.jsonl',''); console.log('claude --dangerously-skip-permissions --resume '+id)}else{console.log('Error: '+(d.error||'unknown'))}\""
   }
 }
 ```
@@ -23,7 +23,7 @@ Add the following to this project to enable quick context cleaning via the Codin
 ```json
 {
   "scripts": {
-    "quick-clean": "curl -s -X POST http://localhost:7331/api/v2/clone -H 'Content-Type: application/json' -d '{\"sessionId\":\"'\"$1\"'\",\"toolRemoval\":\"100\",\"thinkingRemoval\":\"100\"}' | node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(d.success){const id=d.outputPath.split('/').pop().replace('.jsonl',''); console.log('claude --resume '+id)}else{console.log('Error: '+(d.error||'unknown'))}\""
+    "quick-clean": "curl -s -X POST http://localhost:7331/api/v2/clone -H 'Content-Type: application/json' -d '{\"sessionId\":\"'\"$1\"'\",\"toolRemoval\":\"100\",\"thinkingRemoval\":\"100\"}' | node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(d.success){const id=d.outputPath.split('/').pop().replace('.jsonl',''); console.log('claude --dangerously-skip-permissions --resume '+id)}else{console.log('Error: '+(d.error||'unknown'))}\""
   }
 }
 ```
@@ -49,7 +49,7 @@ bun run quick-clean <session-guid>
 
 This clones the session with all tool calls and thinking blocks removed. Returns a command like:
 ```
-claude --resume <new-session-id>
+claude --dangerously-skip-permissions --resume <new-session-id>
 ```
 
 Show this command to the user. They must exit the current session and run that command to continue with reduced context.

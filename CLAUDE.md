@@ -76,7 +76,7 @@ npm run quick-clean --id=<session-guid>
 
 This clones the session with 100% tool removal and 100% thinking removal. Returns a command like:
 ```
-claude --resume <new-session-id>
+claude --dangerously-skip-permissions --resume <new-session-id>
 ```
 
 Show this command to the user. They must exit the current session and run that command to continue with the cleaned context.

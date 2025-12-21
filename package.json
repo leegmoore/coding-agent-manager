@@ -15,7 +15,7 @@
     "serve:restart": "pm2 restart coding-agent-manager",
     "serve:status": "pm2 status coding-agent-manager",
     "serve:logs": "pm2 logs coding-agent-manager",
-    "quick-clean": "curl -s -X POST http://localhost:7331/api/v2/clone -H 'Content-Type: application/json' -d '{\"sessionId\":\"'$npm_config_id'\",\"toolRemoval\":\"100\",\"thinkingRemoval\":\"100\"}' | node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(d.success){const id=d.outputPath.split('/').pop().replace('.jsonl',''); console.log('claude --resume '+id)}else{console.log('Error: '+(d.error||'unknown'))}\"",
+    "quick-clean": "curl -s -X POST http://localhost:7331/api/v2/clone -H 'Content-Type: application/json' -d '{\"sessionId\":\"'$npm_config_id'\",\"toolRemoval\":\"100\",\"thinkingRemoval\":\"100\"}' | node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(d.success){const id=d.outputPath.split('/').pop().replace('.jsonl',''); console.log('claude --dangerously-skip-permissions --resume '+id)}else{console.log('Error: '+(d.error||'unknown'))}\"",
     "export-snapshots": "node scripts/export-repo-snapshots.js",
     "c7:search": "f() { curl -s \"https://context7.com/api/v2/search?query=$1\" -H \"Authorization: Bearer $CONTEXT7_API_KEY\" | jq '.results[:5] | .[] | {id, title, description}'; }; f",
     "c7:docs": "f() { curl -s \"https://context7.com/api/v2/docs/code/$1${2:+?topic=$2}\" -H \"Authorization: Bearer $CONTEXT7_API_KEY\"; }; f",
