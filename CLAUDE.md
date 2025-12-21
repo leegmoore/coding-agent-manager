@@ -59,40 +59,33 @@ pm2 save                   # Save current process list
 pm2 startup                # Generates a command - run it with sudo
 ```
 
-## Tools & Procedures
-
-### Strip Tool Calls from a Session
-
-When the user provides a session GUID and asks to strip tool calls:
-
-```bash
-npm run strip --id=<session-guid>
-```
-
-Example:
-```bash
-npm run strip --id=abc12345-1234-5678-9abc-def012345678
-```
-
-This will:
-1. Create a backup of the session
-2. Remove all tool calls (100%)
-3. Remove all thinking blocks (100%)
-4. Write changes in place
-
-### Web UI
+## Web UI
 
 Access the web interface at `http://localhost:7331`:
 - **Session Browser** (`/`) - Browse and manage sessions
 - **Clone** (`/session-clone`) - Clone with removal/compression options
 - **Visualize** (`/session-detail`) - Turn-by-turn session visualization
 
-### API Endpoints
+## Cloning Sessions
+
+To reduce context in a session:
+
+1. Open the Session Browser at `http://localhost:7331`
+2. Select a project and find the session
+3. Click **Clone**
+4. Configure removal options:
+   - Tool Call Removal: 50%, 75%, 90%, or 100%
+   - Thinking blocks are always removed 100%
+   - Optionally configure compression bands
+5. Clone creates a new session file
+6. Exit your current session and resume the cloned one
+
+**Important:** Cloning creates a new session. You must exit your current session and resume the cloned one for changes to take effect.
+
+## API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/session/:id/strip` | POST | Strip tools and thinking from session |
-| `/api/session/:id/backups` | GET | List backups for a session |
 | `/api/v2/clone` | POST | Clone with compression options |
 | `/api/projects` | GET | List Claude projects |
 | `/api/copilot/projects` | GET | List Copilot workspaces |
