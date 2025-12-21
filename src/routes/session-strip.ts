@@ -30,13 +30,13 @@ router.post("/:id/strip", async (req: Request, res: Response) => {
     const entries = parseSession(content);
 
     // Apply 100% tool removal and 100% thinking removal
-    const { toolCallsRemoved, thinkingBlocksRemoved } = applyRemovals(entries, {
+    const { entries: strippedEntries, toolCallsRemoved, thinkingBlocksRemoved } = applyRemovals(entries, {
       toolRemoval: "100",
       thinkingRemoval: "100",
     });
 
     // Write back in place
-    const output = entries.map((e) => JSON.stringify(e)).join("\n") + "\n";
+    const output = strippedEntries.map((e) => JSON.stringify(e)).join("\n") + "\n";
     await writeFile(sessionPath, output, "utf-8");
 
     res.json({
