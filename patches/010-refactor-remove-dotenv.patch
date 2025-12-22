@@ -1,0 +1,180 @@
+From 75e398ba7a042900061b4828d5548816078ea2d4 Mon Sep 17 00:00:00 2001
+From: leegmoore <lee.g.moore@gmail.com>
+Date: Mon, 22 Dec 2025 15:15:50 -0500
+Subject: [PATCH] refactor: Remove dotenv, use native --env-file
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Removed dotenv dependency (was spamming promotional content)
+- Use Node's native --env-file flag via pm2 --node-args
+- Cleaner logs, no third-party env loading
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+---
+ package-lock.json                             | 24 -----------
+ package.json                                  |  4 +-
+ ...feat-gemini-3-flash-minimal-thinking.patch | 43 +++++++++++++++++++
+ src/server.ts                                 |  7 +--
+ 4 files changed, 45 insertions(+), 33 deletions(-)
+ create mode 100644 patches/009-feat-gemini-3-flash-minimal-thinking.patch
+
+diff --git a/package-lock.json b/package-lock.json
+index 13701c3..9484726 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -10,7 +10,6 @@
+       "license": "ISC",
+       "dependencies": {
+         "better-sqlite3": "^12.5.0",
+-        "dotenv": "^17.2.3",
+         "ejs": "^3.1.10",
+         "express": "5.2",
+         "express-zod-safe": "^1.5.4",
+@@ -18,7 +17,6 @@
+       },
+       "devDependencies": {
+         "@types/better-sqlite3": "^7.6.13",
+-        "@types/dotenv": "^6.1.1",
+         "@types/express": "^5.0.6",
+         "@types/node": "^24.10.1",
+         "autoprefixer": "^10.4.22",
+@@ -1087,16 +1085,6 @@
+       "dev": true,
+       "license": "MIT"
+     },
+-    "node_modules/@types/dotenv": {
+-      "version": "6.1.1",
+-      "resolved": "https://registry.npmjs.org/@types/dotenv/-/dotenv-6.1.1.tgz",
+-      "integrity": "sha512-ftQl3DtBvqHl9L16tpqqzA4YzCSXZfi7g8cQceTz5rOlYtk/IZbFjAv3mLOQlNIgOaylCQWQoBdDQHPgEBJPHg==",
+-      "dev": true,
+-      "license": "MIT",
+-      "dependencies": {
+-        "@types/node": "*"
+-      }
+-    },
+     "node_modules/@types/estree": {
+       "version": "1.0.8",
+       "resolved": "https://registry.npmjs.org/@types/estree/-/estree-1.0.8.tgz",
+@@ -1936,18 +1924,6 @@
+       "dev": true,
+       "license": "MIT"
+     },
+-    "node_modules/dotenv": {
+-      "version": "17.2.3",
+-      "resolved": "https://registry.npmjs.org/dotenv/-/dotenv-17.2.3.tgz",
+-      "integrity": "sha512-JVUnt+DUIzu87TABbhPmNfVdBDt18BLOWjMUFJMSi/Qqg7NTYtabbvSNJGOJ7afbRuv9D/lngizHtP7QyLQ+9w==",
+-      "license": "BSD-2-Clause",
+-      "engines": {
+-        "node": ">=12"
+-      },
+-      "funding": {
+-        "url": "https://dotenvx.com"
+-      }
+-    },
+     "node_modules/dunder-proto": {
+       "version": "1.0.1",
+       "resolved": "https://registry.npmjs.org/dunder-proto/-/dunder-proto-1.0.1.tgz",
+diff --git a/package.json b/package.json
+index 70b4383..d3450ac 100644
+--- a/package.json
++++ b/package.json
+@@ -10,7 +10,7 @@
+     "test": "vitest run",
+     "test:watch": "vitest",
+     "typecheck": "tsc --noEmit",
+-    "serve": "pm2 start dist/server.js --name coding-agent-manager",
++    "serve": "pm2 start dist/server.js --name coding-agent-manager --node-args='--env-file=.env.local'",
+     "serve:stop": "pm2 stop coding-agent-manager",
+     "serve:restart": "pm2 restart coding-agent-manager",
+     "serve:status": "pm2 status coding-agent-manager",
+@@ -27,7 +27,6 @@
+   "description": "",
+   "dependencies": {
+     "better-sqlite3": "^12.5.0",
+-    "dotenv": "^17.2.3",
+     "ejs": "^3.1.10",
+     "express": "5.2",
+     "express-zod-safe": "^1.5.4",
+@@ -35,7 +34,6 @@
+   },
+   "devDependencies": {
+     "@types/better-sqlite3": "^7.6.13",
+-    "@types/dotenv": "^6.1.1",
+     "@types/express": "^5.0.6",
+     "@types/node": "^24.10.1",
+     "autoprefixer": "^10.4.22",
+diff --git a/patches/009-feat-gemini-3-flash-minimal-thinking.patch b/patches/009-feat-gemini-3-flash-minimal-thinking.patch
+new file mode 100644
+index 0000000..269a176
+--- /dev/null
++++ b/patches/009-feat-gemini-3-flash-minimal-thinking.patch
+@@ -0,0 +1,43 @@
++From 0dac62d0658b99f2f410a840860d5d676ac0df5e Mon Sep 17 00:00:00 2001
++From: leegmoore <lee.g.moore@gmail.com>
++Date: Mon, 22 Dec 2025 14:04:26 -0500
++Subject: [PATCH] feat: Update to Gemini 3 Flash Preview with minimal thinking
++MIME-Version: 1.0
++Content-Type: text/plain; charset=UTF-8
++Content-Transfer-Encoding: 8bit
++
++- Changed default model to google/gemini-3-flash-preview
++- Added reasoning.effort = minimal to reduce thinking token usage
++
++🤖 Generated with [Claude Code](https://claude.com/claude-code)
++
++Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
++---
++ src/providers/openrouter-provider.ts | 4 +++-
++ 1 file changed, 3 insertions(+), 1 deletion(-)
++
++diff --git a/src/providers/openrouter-provider.ts b/src/providers/openrouter-provider.ts
++index 727e32e..48eafc0 100644
++--- a/src/providers/openrouter-provider.ts
+++++ b/src/providers/openrouter-provider.ts
++@@ -24,7 +24,8 @@ export class OpenRouterProvider implements LlmProvider {
++       throw new ConfigMissingError("OPENROUTER_API_KEY");
++     }
++     this.apiKey = apiKey;
++-    this.model = process.env.OPENROUTER_MODEL || "google/gemini-2.5-flash";
+++    this.model =
+++      process.env.OPENROUTER_MODEL || "google/gemini-3-flash-preview";
++     this.modelLarge =
++       process.env.OPENROUTER_MODEL_LARGE || "anthropic/claude-opus-4.5";
++   }
++@@ -83,6 +84,7 @@ CONTENT`;
++         body: JSON.stringify({
++           model,
++           messages: [{ role: "user", content: prompt }],
+++          reasoning: { effort: "minimal" },
++         }),
++       }
++     );
++-- 
++2.49.0
++
+diff --git a/src/server.ts b/src/server.ts
+index 2b1904e..188ed93 100644
+--- a/src/server.ts
++++ b/src/server.ts
+@@ -1,14 +1,9 @@
+-import dotenv from "dotenv";
+ import path from "path";
+ import { fileURLToPath } from "url";
++import express from "express";
+ 
+-// Load environment variables from .env.local (fallback to .env)
+ const __filename = fileURLToPath(import.meta.url);
+ const __dirname = path.dirname(__filename);
+-dotenv.config({ path: path.join(__dirname, "../.env.local") });
+-dotenv.config({ path: path.join(__dirname, "../.env") });
+-
+-import express from "express";
+ import { cloneRouter } from "./routes/clone.js";
+ import { cloneRouterV2 } from "./routes/clone-v2.js";
+ import { sessionStructureRouter } from "./routes/session-structure.js";
+-- 
+2.49.0
+
