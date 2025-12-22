@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit",
     "serve": "pm2 start dist/server.js --name coding-agent-manager --node-args='--env-file=.env.local'",
     "serve:stop": "pm2 stop coding-agent-manager",
-    "serve:restart": "pm2 restart coding-agent-manager",
+    "serve:restart": "pm2 restart coding-agent-manager --update-env",
     "serve:status": "pm2 status coding-agent-manager",
     "serve:logs": "pm2 logs coding-agent-manager",
     "quick-clean": "curl -s -X POST http://localhost:7331/api/v2/clone -H 'Content-Type: application/json' -d '{\"sessionId\":\"'$npm_config_id'\",\"toolRemoval\":\"100\",\"thinkingRemoval\":\"100\"}' | node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(d.success){const id=d.outputPath.split('/').pop().replace('.jsonl',''); console.log('claude --dangerously-skip-permissions --resume '+id)}else{console.log('Error: '+(d.error||'unknown'))}\"",
