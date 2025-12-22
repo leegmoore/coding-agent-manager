@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "serve": "pm2 start dist/server.js --name coding-agent-manager",
+    "serve": "pm2 start dist/server.js --name coding-agent-manager --node-args='--env-file=.env.local'",
     "serve:stop": "pm2 stop coding-agent-manager",
     "serve:restart": "pm2 restart coding-agent-manager",
     "serve:status": "pm2 status coding-agent-manager",
@@ -27,7 +27,6 @@
   "description": "",
   "dependencies": {
     "better-sqlite3": "^12.5.0",
-    "dotenv": "^17.2.3",
     "ejs": "^3.1.10",
     "express": "5.2",
     "express-zod-safe": "^1.5.4",
@@ -35,7 +34,6 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
-    "@types/dotenv": "^6.1.1",
     "@types/express": "^5.0.6",
     "@types/node": "^24.10.1",
     "autoprefixer": "^10.4.22",

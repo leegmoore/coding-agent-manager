@@ -1,0 +1,43 @@
+From 0dac62d0658b99f2f410a840860d5d676ac0df5e Mon Sep 17 00:00:00 2001
+From: leegmoore <lee.g.moore@gmail.com>
+Date: Mon, 22 Dec 2025 14:04:26 -0500
+Subject: [PATCH] feat: Update to Gemini 3 Flash Preview with minimal thinking
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Changed default model to google/gemini-3-flash-preview
+- Added reasoning.effort = minimal to reduce thinking token usage
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+---
+ src/providers/openrouter-provider.ts | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/providers/openrouter-provider.ts b/src/providers/openrouter-provider.ts
+index 727e32e..48eafc0 100644
+--- a/src/providers/openrouter-provider.ts
++++ b/src/providers/openrouter-provider.ts
+@@ -24,7 +24,8 @@ export class OpenRouterProvider implements LlmProvider {
+       throw new ConfigMissingError("OPENROUTER_API_KEY");
+     }
+     this.apiKey = apiKey;
+-    this.model = process.env.OPENROUTER_MODEL || "google/gemini-2.5-flash";
++    this.model =
++      process.env.OPENROUTER_MODEL || "google/gemini-3-flash-preview";
+     this.modelLarge =
+       process.env.OPENROUTER_MODEL_LARGE || "anthropic/claude-opus-4.5";
+   }
+@@ -83,6 +84,7 @@ CONTENT`;
+         body: JSON.stringify({
+           model,
+           messages: [{ role: "user", content: prompt }],
++          reasoning: { effort: "minimal" },
+         }),
+       }
+     );
+-- 
+2.49.0
+
