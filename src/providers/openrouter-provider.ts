@@ -24,7 +24,8 @@ export class OpenRouterProvider implements LlmProvider {
       throw new ConfigMissingError("OPENROUTER_API_KEY");
     }
     this.apiKey = apiKey;
-    this.model = process.env.OPENROUTER_MODEL || "google/gemini-2.5-flash";
+    this.model =
+      process.env.OPENROUTER_MODEL || "google/gemini-3-flash-preview";
     this.modelLarge =
       process.env.OPENROUTER_MODEL_LARGE || "anthropic/claude-opus-4.5";
   }
@@ -83,6 +84,7 @@ CONTENT`;
         body: JSON.stringify({
           model,
           messages: [{ role: "user", content: prompt }],
+          reasoning: { effort: "minimal" },
         }),
       }
     );
