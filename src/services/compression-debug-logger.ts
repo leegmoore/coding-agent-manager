@@ -92,14 +92,21 @@ export async function writeCompressionDebugLog(
       markdown += `\n**Compression Stats:**\n`;
       markdown += `- Original: ${task.estimatedTokens} tokens\n`;
       markdown += `- Compressed: ${compressedTokens} tokens\n`;
-      markdown += `- Reduction: ${reduction}%\n\n`;
+      markdown += `- Reduction: ${reduction}%\n`;
+      if (task.durationMs !== undefined) {
+        markdown += `- Duration: ${task.durationMs}ms\n`;
+      }
+      markdown += `\n`;
     } else if (task.status === "skipped") {
       markdown += `**Status:** Not Compressed - Below Threshold (${task.estimatedTokens} tokens)\n\n`;
       markdown += `**Content:**\n\`\`\`\n${escapeMarkdown(task.originalContent)}\n\`\`\`\n\n`;
     } else if (task.status === "failed") {
       markdown += `**Status:** Not Compressed - Failed After ${task.attempt} Attempts\n\n`;
-      markdown += `**Error:** \`${task.error ?? "Unknown error"}\`\n\n`;
-      markdown += `**Content:**\n\`\`\`\n${escapeMarkdown(task.originalContent)}\n\`\`\`\n\n`;
+      markdown += `**Error:** \`${task.error ?? "Unknown error"}\`\n`;
+      if (task.durationMs !== undefined) {
+        markdown += `**Duration:** ${task.durationMs}ms\n`;
+      }
+      markdown += `\n**Content:**\n\`\`\`\n${escapeMarkdown(task.originalContent)}\n\`\`\`\n\n`;
     }
 
     markdown += `---\n\n`;
@@ -146,6 +153,13 @@ export async function writeCompressionDebugLog(
   const skipped = tasks.filter((t) => t.status === "skipped").length;
   const failed = tasks.filter((t) => t.status === "failed").length;
 
+  // Calculate timing stats
+  const tasksWithDuration = tasks.filter((t) => t.durationMs !== undefined);
+  const totalDurationMs = tasksWithDuration.reduce((sum, t) => sum + (t.durationMs ?? 0), 0);
+  const avgDurationMs = tasksWithDuration.length > 0
+    ? Math.round(totalDurationMs / tasksWithDuration.length)
+    : 0;
+
   markdown += `## Summary\n\n`;
   markdown += `Total messages in bands: ${tasks.length}\n`;
   markdown += `- Compressed successfully: ${successful}\n`;
@@ -153,6 +167,11 @@ export async function writeCompressionDebugLog(
   markdown += `- Failed: ${failed}\n`;
   if (nonBandMessages.length > 0) {
     markdown += `\nMessages not in any band: ${nonBandMessages.length}\n`;
+  }
+  if (tasksWithDuration.length > 0) {
+    markdown += `\n**Timing:**\n`;
+    markdown += `- Total: ${(totalDurationMs / 1000).toFixed(2)}s\n`;
+    markdown += `- Average per call: ${avgDurationMs}ms\n`;
   }
 
   // Write file

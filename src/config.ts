@@ -6,7 +6,7 @@ export const config = {
   get claudeDir() {
     return process.env.CLAUDE_DIR || path.join(os.homedir(), ".claude");
   },
-  port: parseInt(process.env.PORT || "7331", 10),
+  port: parseInt(process.env.PORT || "4010", 10),
   get projectsDir() {
     return path.join(this.claudeDir, "projects");
   },
@@ -31,7 +31,7 @@ export function loadCompressionConfig(): CompressionConfig {
       10
     ),
     maxAttempts: parseInt(process.env.COMPRESSION_MAX_ATTEMPTS || "4", 10),
-    minTokens: parseInt(process.env.COMPRESSION_MIN_TOKENS || "30", 10),
+    minTokens: parseInt(process.env.COMPRESSION_MIN_TOKENS || "50", 10),
     thinkingThreshold: parseInt(
       process.env.COMPRESSION_THINKING_THRESHOLD || "1000",
       10

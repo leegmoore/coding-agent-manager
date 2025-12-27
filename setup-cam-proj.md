@@ -6,7 +6,7 @@ Give this to a Claude agent in any project to set up access to the context clean
 
 ## Setup Instructions
 
-Add the following to this project to enable quick context cleaning via the Coding Agent Manager service running on port 7331.
+Add the following to this project to enable quick context cleaning via the Coding Agent Manager service running on port 4010.
 
 ### 1. Add to package.json
 
@@ -14,7 +14,7 @@ Add the following to this project to enable quick context cleaning via the Codin
 ```json
 {
   "scripts": {
-    "quick-clean": "curl -s -X POST http://localhost:7331/api/v2/clone -H 'Content-Type: application/json' -d '{\"sessionId\":\"'$npm_config_id'\",\"toolRemoval\":\"100\",\"thinkingRemoval\":\"100\"}' | node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(d.success){const id=d.outputPath.split('/').pop().replace('.jsonl',''); console.log('claude --dangerously-skip-permissions --resume '+id)}else{console.log('Error: '+(d.error||'unknown'))}\""
+    "quick-clean": "curl -s -X POST http://localhost:4010/api/v2/clone -H 'Content-Type: application/json' -d '{\"sessionId\":\"'$npm_config_id'\",\"toolRemoval\":\"100\",\"thinkingRemoval\":\"100\"}' | node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(d.success){const id=d.outputPath.split('/').pop().replace('.jsonl',''); console.log('claude --dangerously-skip-permissions --resume '+id)}else{console.log('Error: '+(d.error||'unknown'))}\""
   }
 }
 ```
@@ -23,7 +23,7 @@ Add the following to this project to enable quick context cleaning via the Codin
 ```json
 {
   "scripts": {
-    "quick-clean": "curl -s -X POST http://localhost:7331/api/v2/clone -H 'Content-Type: application/json' -d '{\"sessionId\":\"'\"$1\"'\",\"toolRemoval\":\"100\",\"thinkingRemoval\":\"100\"}' | node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(d.success){const id=d.outputPath.split('/').pop().replace('.jsonl',''); console.log('claude --dangerously-skip-permissions --resume '+id)}else{console.log('Error: '+(d.error||'unknown'))}\""
+    "quick-clean": "curl -s -X POST http://localhost:4010/api/v2/clone -H 'Content-Type: application/json' -d '{\"sessionId\":\"'\"$1\"'\",\"toolRemoval\":\"100\",\"thinkingRemoval\":\"100\"}' | node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(d.success){const id=d.outputPath.split('/').pop().replace('.jsonl',''); console.log('claude --dangerously-skip-permissions --resume '+id)}else{console.log('Error: '+(d.error||'unknown'))}\""
   }
 }
 ```
@@ -74,7 +74,7 @@ Run the quick-clean script with their session ID and show them the resume comman
 
 **"Session not found"** - Check the session GUID is correct.
 
-**Service location:** The CAM service should be running on `http://localhost:7331`. Verify with:
+**Service location:** The CAM service should be running on `http://localhost:4010`. Verify with:
 ```bash
-curl http://localhost:7331/health
+curl http://localhost:4010/health
 ```

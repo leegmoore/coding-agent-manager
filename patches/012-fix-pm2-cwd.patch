@@ -1,0 +1,70 @@
+From 91f2f98f5d2ce5a41ef1be65c452aa77b47a9c41 Mon Sep 17 00:00:00 2001
+From: leegmoore <lee.g.moore@gmail.com>
+Date: Mon, 22 Dec 2025 15:25:22 -0500
+Subject: [PATCH] fix: Add --cwd to pm2 serve for correct env file path
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+---
+ package.json                                  |  2 +-
+ .../011-fix-serve-restart-update-env.patch    | 31 +++++++++++++++++++
+ 2 files changed, 32 insertions(+), 1 deletion(-)
+ create mode 100644 patches/011-fix-serve-restart-update-env.patch
+
+diff --git a/package.json b/package.json
+index 90f7191..b612df4 100644
+--- a/package.json
++++ b/package.json
+@@ -10,7 +10,7 @@
+     "test": "vitest run",
+     "test:watch": "vitest",
+     "typecheck": "tsc --noEmit",
+-    "serve": "pm2 start dist/server.js --name coding-agent-manager --node-args='--env-file=.env.local'",
++    "serve": "pm2 start dist/server.js --name coding-agent-manager --cwd \"$(pwd)\" --node-args='--env-file=.env.local'",
+     "serve:stop": "pm2 stop coding-agent-manager",
+     "serve:restart": "pm2 restart coding-agent-manager --update-env",
+     "serve:status": "pm2 status coding-agent-manager",
+diff --git a/patches/011-fix-serve-restart-update-env.patch b/patches/011-fix-serve-restart-update-env.patch
+new file mode 100644
+index 0000000..88d28e9
+--- /dev/null
++++ b/patches/011-fix-serve-restart-update-env.patch
+@@ -0,0 +1,31 @@
++From ba1dcf90482bfcb3265beaa225903dd90a308c44 Mon Sep 17 00:00:00 2001
++From: leegmoore <lee.g.moore@gmail.com>
++Date: Mon, 22 Dec 2025 15:22:00 -0500
++Subject: [PATCH] fix: Add --update-env to serve:restart script
++MIME-Version: 1.0
++Content-Type: text/plain; charset=UTF-8
++Content-Transfer-Encoding: 8bit
++
++🤖 Generated with [Claude Code](https://claude.com/claude-code)
++
++Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
++---
++ package.json | 2 +-
++ 1 file changed, 1 insertion(+), 1 deletion(-)
++
++diff --git a/package.json b/package.json
++index d3450ac..90f7191 100644
++--- a/package.json
+++++ b/package.json
++@@ -12,7 +12,7 @@
++     "typecheck": "tsc --noEmit",
++     "serve": "pm2 start dist/server.js --name coding-agent-manager --node-args='--env-file=.env.local'",
++     "serve:stop": "pm2 stop coding-agent-manager",
++-    "serve:restart": "pm2 restart coding-agent-manager",
+++    "serve:restart": "pm2 restart coding-agent-manager --update-env",
++     "serve:status": "pm2 status coding-agent-manager",
++     "serve:logs": "pm2 logs coding-agent-manager",
++     "quick-clean": "curl -s -X POST http://localhost:7331/api/v2/clone -H 'Content-Type: application/json' -d '{\"sessionId\":\"'$npm_config_id'\",\"toolRemoval\":\"100\",\"thinkingRemoval\":\"100\"}' | node -e \"const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(d.success){const id=d.outputPath.split('/').pop().replace('.jsonl',''); console.log('claude --dangerously-skip-permissions --resume '+id)}else{console.log('Error: '+(d.error||'unknown'))}\"",
++-- 
++2.49.0
++
+-- 
+2.49.0
+

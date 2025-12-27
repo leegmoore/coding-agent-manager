@@ -25,13 +25,13 @@ export class OpenRouterProvider implements LlmProvider {
     }
     this.apiKey = apiKey;
     this.model =
-      process.env.OPENROUTER_MODEL || "google/gemini-3-flash-preview";
+      process.env.OPENROUTER_MODEL || "google/gemini-2.5-flash";
     this.modelLarge =
       process.env.OPENROUTER_MODEL_LARGE || "anthropic/claude-opus-4.5";
   }
 
   /**
-   * Build the compression prompt using the team-bruce template.
+   * Build the compression prompt for Flash (simple, fast).
    */
   private buildPrompt(text: string, level: CompressionLevel): string {
     const targetPercent = level === "compress" ? 35 : 10;
@@ -56,11 +56,42 @@ CONTENT`;
   }
 
   /**
+   * Build the compression prompt for Opus (with thinking and quality checks).
+   */
+  private buildPromptLarge(text: string, level: CompressionLevel): string {
+    const targetPercent = level === "compress" ? 35 : 10;
+    return `You are TextCompressor. Your task is to compress the text below to approximately ${targetPercent}% of its original length.
+
+Think step by step:
+1. First, identify the key entities, claims, and relationships that must be preserved
+2. Identify redundancy, filler, and hedging that can be removed
+3. Draft a compressed version
+4. Check: Is it approximately ${targetPercent}% of the original length? (tokens ≈ ceil(characters / 4))
+5. Check: Does it preserve all essential meaning?
+6. Revise if needed, then output
+
+Rules:
+- Preserve key entities, claims, and relationships
+- Remove redundancy, filler, and hedging
+- Keep fluent English
+- If unsure about length, err shorter
+- Do not include explanations or commentary outside the JSON
+- Do not reference "I", "we", "user", "assistant", or conversation roles
+
+After your thinking, return exactly one JSON object: {"text": "your compressed text"}
+
+Input text:
+<<<CONTENT
+${text}
+CONTENT`;
+  }
+
+  /**
    * Compress text using the OpenRouter API.
    *
    * @param text - The text to compress
    * @param level - Compression level: "compress" (35%) or "heavy-compress" (10%)
-   * @param useLargeModel - Whether to use the large model for messages >1000 tokens
+   * @param useLargeModel - Whether to use the large model for messages >500 tokens
    * @returns The compressed text
    */
   async compress(
@@ -69,7 +100,20 @@ CONTENT`;
     useLargeModel: boolean
   ): Promise<string> {
     const model = useLargeModel ? this.modelLarge : this.model;
-    const prompt = this.buildPrompt(text, level);
+    const prompt = useLargeModel
+      ? this.buildPromptLarge(text, level)
+      : this.buildPrompt(text, level);
+
+    // Build request body - add extended thinking for Opus
+    const requestBody: Record<string, unknown> = {
+      model,
+      messages: [{ role: "user", content: prompt }],
+    };
+
+    if (useLargeModel) {
+      // Enable extended thinking for Opus
+      requestBody.reasoning = { effort: "high" };
+    }
 
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
@@ -81,11 +125,7 @@ CONTENT`;
           "HTTP-Referer": process.env.OPENROUTER_SITE_URL || "",
           "X-Title": process.env.OPENROUTER_SITE_NAME || "coding-agent-manager",
         },
-        body: JSON.stringify({
-          model,
-          messages: [{ role: "user", content: prompt }],
-          reasoning: { effort: "minimal" },
-        }),
+        body: JSON.stringify(requestBody),
       }
     );
 

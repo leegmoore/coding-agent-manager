@@ -60,6 +60,7 @@ const isDirectRun = import.meta.url === `file://${process.argv[1]}` ||
 if (isDirectRun) {
   app.listen(config.port, () => {
     console.log(`Server running at http://localhost:${config.port}`);
+    console.log(`LLM_PROVIDER: ${process.env.LLM_PROVIDER || "(not set, defaulting to openrouter)"}`);
   });
 }
 

@@ -7,7 +7,7 @@ A utility for managing Claude Code and GitHub Copilot session files. Provides to
 ```
 src/
 ├── server.ts              # Express entry point
-├── config.ts              # Environment configuration (port 7331)
+├── config.ts              # Environment configuration (port 4010)
 ├── types.ts               # TypeScript interfaces
 ├── errors.ts              # Custom error classes
 ├── lib/                   # Core utilities
@@ -35,33 +35,15 @@ views/pages/               # EJS templates
 
 ## Running the Service
 
-The service runs on **port 7331** by default.
+The service runs on **port 4010** by default.
 
-### Development (with hot reload)
 ```bash
 npm run dev
 ```
 
-### Production (via pm2)
-```bash
-npm run build              # Compile TypeScript to dist/
-npm run serve              # Start via pm2
-npm run serve:stop         # Stop the service
-npm run serve:restart      # Restart after rebuild
-npm run serve:status       # Check if running
-npm run serve:logs         # Tail logs
-```
-
-### macOS: Auto-start on boot
-```bash
-npm run serve              # Start the process first
-pm2 save                   # Save current process list
-pm2 startup                # Generates a command - run it with sudo
-```
-
 ## Web UI
 
-Access the web interface at `http://localhost:7331`:
+Access the web interface at `http://localhost:4010`:
 - **Session Browser** (`/`) - Browse and manage sessions
 - **Clone** (`/session-clone`) - Clone with removal/compression options
 - **Visualize** (`/session-detail`) - Turn-by-turn session visualization
@@ -85,7 +67,7 @@ Show this command to the user. They must exit the current session and run that c
 
 For more control (custom removal percentages, compression):
 
-1. Open the Session Browser at `http://localhost:7331`
+1. Open the Session Browser at `http://localhost:4010`
 2. Select a project and find the session
 3. Click **Clone**
 4. Configure removal options

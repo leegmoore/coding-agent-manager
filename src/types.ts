@@ -49,6 +49,7 @@ export interface CompressionTask {
   status: "pending" | "success" | "failed" | "skipped";
   result?: string;
   error?: string;
+  durationMs?: number;
 }
 
 export interface TurnBandMapping {
@@ -64,6 +65,8 @@ export interface CompressionStats {
   compressedTokens: number;
   tokensRemoved: number;
   reductionPercent: number;
+  totalDurationMs?: number;
+  avgDurationMs?: number;
 }
 
 export interface CompressionConfig {

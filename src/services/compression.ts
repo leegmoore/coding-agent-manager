@@ -247,6 +247,13 @@ export function calculateStats(
   const reductionPercent =
     originalTokens > 0 ? Math.round((tokensRemoved / originalTokens) * 100) : 0;
 
+  // Calculate timing stats from tasks that have durationMs
+  const tasksWithDuration = completedTasks.filter((t) => t.durationMs !== undefined);
+  const totalDurationMs = tasksWithDuration.reduce((sum, t) => sum + (t.durationMs ?? 0), 0);
+  const avgDurationMs = tasksWithDuration.length > 0
+    ? Math.round(totalDurationMs / tasksWithDuration.length)
+    : 0;
+
   return {
     messagesCompressed: successful.length,
     messagesSkipped: totalEntries - originalTasks.length,
@@ -255,6 +262,8 @@ export function calculateStats(
     compressedTokens,
     tokensRemoved,
     reductionPercent,
+    totalDurationMs: tasksWithDuration.length > 0 ? totalDurationMs : undefined,
+    avgDurationMs: tasksWithDuration.length > 0 ? avgDurationMs : undefined,
   };
 }
 

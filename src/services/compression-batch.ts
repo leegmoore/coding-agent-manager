@@ -28,19 +28,21 @@ export async function compressWithTimeout(
     setTimeout(() => reject(new Error("Compression timeout")), task.timeoutMs);
   });
 
+  const startTime = Date.now();
   try {
-    const useLargeModel = task.estimatedTokens > 1000;
+    const useLargeModel = task.estimatedTokens > 500;
     const result = await Promise.race([
       client.compress(task.originalContent, task.level, useLargeModel),
       timeoutPromise,
     ]);
 
-    return { ...task, status: "success", result };
+    return { ...task, status: "success", result, durationMs: Date.now() - startTime };
   } catch (error) {
     return {
       ...task,
       status: "failed",
       error: error instanceof Error ? error.message : "Unknown error",
+      durationMs: Date.now() - startTime,
     };
   }
 }
