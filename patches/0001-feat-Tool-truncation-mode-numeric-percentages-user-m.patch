@@ -1,0 +1,752 @@
+From aea3612b0a7f9da6353893e6a90c10bda470fc3f Mon Sep 17 00:00:00 2001
+From: leegmoore <lee.g.moore@gmail.com>
+Date: Sat, 27 Dec 2025 09:13:46 -0500
+Subject: [PATCH] feat: Tool truncation mode, numeric percentages, user message
+ compression toggle
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Add toolHandlingMode: "remove" | "truncate" (truncate keeps 3 lines/250 chars)
+- Change toolRemoval/thinkingRemoval from string enums to numeric 0-100
+- Add includeUserMessages option for compression (default: false = assistant only)
+- Update frontend with new dropdowns (70/85/95/100%), mode selector, checkbox
+- Add truncateToolContent() function with ellipsis suffix
+- Update lineage logger for numeric values
+- Add 14 new tests for truncation and compression filter
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+---
+ public/js/pages/clone.js                      |  11 +-
+ src/schemas/clone-v2.ts                       |   7 +-
+ src/services/compression.ts                   |  20 ++-
+ src/services/lineage-logger.ts                |   4 +-
+ src/services/session-clone.ts                 | 158 +++++++++++++-----
+ src/types.ts                                  |   5 +-
+ test/clone-v2-integration.test.ts             |   5 +-
+ test/clone.test.ts                            |   4 +-
+ test/compression-core.test.ts                 |  13 +-
+ .../xyz987uvw654rst321/state.vscdb            | Bin 12288 -> 12288 bytes
+ test/services/compression-user-filter.test.ts |  84 ++++++++++
+ test/services/session-clone-truncate.test.ts  |  61 +++++++
+ views/pages/clone.ejs                         |  33 +++-
+ 13 files changed, 333 insertions(+), 72 deletions(-)
+ create mode 100644 test/services/compression-user-filter.test.ts
+ create mode 100644 test/services/session-clone-truncate.test.ts
+
+diff --git a/public/js/pages/clone.js b/public/js/pages/clone.js
+index e73b43d..d34436f 100644
+--- a/public/js/pages/clone.js
++++ b/public/js/pages/clone.js
+@@ -23,6 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
+   const bandPreview = document.getElementById('band-preview');
+   const bandErrors = document.getElementById('band-errors');
+   const debugLogCheckbox = document.getElementById('debugLog');
++  const toolHandlingModeSelect = document.getElementById('toolHandlingMode');
++  const includeUserMessagesCheckbox = document.getElementById('includeUserMessages');
+   const compressionStatsDiv = document.getElementById('compression-stats');
+   const compressionStatsList = document.getElementById('compression-stats-list');
+   const debugLogLinkDiv = document.getElementById('debug-log-link');
+@@ -129,12 +131,17 @@ document.addEventListener('DOMContentLoaded', () => {
+       // Build request body with compression options
+       const compressionBands = buildCompressionBands(band1Input.value, band2Input.value);
+       const debugLog = debugLogCheckbox.checked;
++      const toolRemovalValue = formData.get('toolRemoval');
++      const toolHandlingMode = toolHandlingModeSelect?.value || 'remove';
++      const includeUserMessages = includeUserMessagesCheckbox?.checked || false;
+ 
+       const result = await post('/api/v2/clone', {
+         sessionId,
+-        toolRemoval: formData.get('toolRemoval'),
+-        thinkingRemoval: '100', // Always remove all thinking blocks
++        toolRemoval: parseInt(toolRemovalValue, 10) || 0,
++        toolHandlingMode,
++        thinkingRemoval: 100, // Always remove all thinking blocks
+         compressionBands,
++        includeUserMessages,
+         debugLog,
+       });
+ 
+diff --git a/src/schemas/clone-v2.ts b/src/schemas/clone-v2.ts
+index 1b4833a..06a5294 100644
+--- a/src/schemas/clone-v2.ts
++++ b/src/schemas/clone-v2.ts
+@@ -17,9 +17,11 @@ function validateNonOverlappingBands(data: { compressionBands?: { start: number;
+ 
+ export const CloneRequestSchemaV2 = z.object({
+   sessionId: z.string().uuid(),
+-  toolRemoval: z.enum(["none", "50", "75", "100"]).default("none"),
+-  thinkingRemoval: z.enum(["none", "50", "75", "100"]).default("none"),
++  toolRemoval: z.number().min(0).max(100).default(0),
++  toolHandlingMode: z.enum(["remove", "truncate"]).default("remove"),
++  thinkingRemoval: z.number().min(0).max(100).default(0),
+   compressionBands: z.array(CompressionBandSchema).optional(),
++  includeUserMessages: z.boolean().default(false),
+   debugLog: z.boolean().optional().default(false),
+ }).refine(validateNonOverlappingBands, "Compression bands must not overlap");
+ 
+@@ -41,6 +43,7 @@ export const CloneResponseSchemaV2 = z.object({
+     originalTurnCount: z.number(),
+     outputTurnCount: z.number(),
+     toolCallsRemoved: z.number(),
++    toolCallsTruncated: z.number().optional(),
+     thinkingBlocksRemoved: z.number(),
+     compression: CompressionStatsSchema.optional(),
+   }),
+diff --git a/src/services/compression.ts b/src/services/compression.ts
+index b3883cc..435541d 100644
+--- a/src/services/compression.ts
++++ b/src/services/compression.ts
+@@ -146,14 +146,16 @@ function calculateInitialTimeout(estimatedTokens: number): number {
+ 
+ /**
+  * Create compression tasks for messages in turns that have compression bands.
+- * Messages below the minimum token threshold (default 30) get status "skipped".
++ * Messages below the minimum token threshold (default 50) get status "skipped".
+  * Only creates tasks for user and assistant message types.
++ * If includeUserMessages is false, only assistant messages are compressed.
+  */
+ export function createCompressionTasks(
+   entries: SessionEntry[],
+   turns: Turn[],
+   mapping: TurnBandMapping[],
+-  minTokens: number = 30
++  minTokens: number = 50,
++  includeUserMessages: boolean = false
+ ): CompressionTask[] {
+   const tasks: CompressionTask[] = [];
+ 
+@@ -169,8 +171,12 @@ export function createCompressionTasks(
+     for (let entryIndex = turn.startIndex; entryIndex <= turn.endIndex; entryIndex++) {
+       const entry = entries[entryIndex];
+ 
+-      // Only process user and assistant message types
+-      if (entry.type !== "user" && entry.type !== "assistant") {
++      // Filter by message type based on includeUserMessages
++      if (entry.type === "assistant") {
++        // Always include assistant messages
++      } else if (entry.type === "user" && includeUserMessages) {
++        // Only include user messages if flag is true
++      } else {
+         continue;
+       }
+ 
+@@ -271,12 +277,14 @@ export function calculateStats(
+  * Main compression orchestration function.
+  * Orchestrates turn mapping, task creation, batch processing, and result application.
+  * Returns entries, stats, and all tasks (for debug logging).
++ * If includeUserMessages is false (default), only assistant messages are compressed.
+  */
+ export async function compressMessages(
+   entries: SessionEntry[],
+   turns: Turn[],
+   bands: CompressionBand[],
+-  config: CompressionConfig
++  config: CompressionConfig,
++  includeUserMessages: boolean = false
+ ): Promise<{ entries: SessionEntry[]; stats: CompressionStats; tasks: CompressionTask[] }> {
+   // Handle empty bands case - return unchanged
+   if (bands.length === 0) {
+@@ -299,7 +307,7 @@ export async function compressMessages(
+   const mapping = mapTurnsToBands(turns, bands);
+ 
+   // Create tasks (includes both pending and skipped tasks)
+-  const allTasks = createCompressionTasks(entries, turns, mapping, config.minTokens);
++  const allTasks = createCompressionTasks(entries, turns, mapping, config.minTokens, includeUserMessages);
+ 
+   // Separate pending tasks for processing (skipped tasks stay as-is)
+   const pendingTasks = allTasks.filter((t) => t.status === "pending");
+diff --git a/src/services/lineage-logger.ts b/src/services/lineage-logger.ts
+index 140f512..6160270 100644
+--- a/src/services/lineage-logger.ts
++++ b/src/services/lineage-logger.ts
+@@ -8,8 +8,8 @@ export interface LineageEntry {
+   targetPath: string;
+   sourceId: string;
+   sourcePath: string;
+-  toolRemoval: string;
+-  thinkingRemoval: string;
++  toolRemoval: number;
++  thinkingRemoval: number;
+   // New v2 fields (optional for backward compatibility)
+   compressionBands?: CompressionBand[];
+   compressionStats?: CompressionStats;
+diff --git a/src/services/session-clone.ts b/src/services/session-clone.ts
+index 3e88dd5..8d6334e 100644
+--- a/src/services/session-clone.ts
++++ b/src/services/session-clone.ts
+@@ -126,6 +126,32 @@ function createSummaryEntry(entries: SessionEntry[], firstUserMessage: string):
+   } as SessionEntry;
+ }
+ 
++/**
++ * Truncate tool content to 3 lines or 250 characters, whichever comes first.
++ * Adds '...' suffix when truncated.
++ */
++export function truncateToolContent(content: string): string {
++  if (!content) return content;
++
++  const maxLines = 3;
++  const maxChars = 250;
++
++  const lines = content.split('\n');
++  let truncated = lines.slice(0, maxLines).join('\n');
++  let wasTruncated = lines.length > maxLines;
++
++  if (truncated.length > maxChars) {
++    truncated = truncated.slice(0, maxChars);
++    wasTruncated = true;
++  }
++
++  if (wasTruncated) {
++    truncated = truncated.trimEnd() + '...';
++  }
++
++  return truncated;
++}
++
+ /**
+  * Determines if an entry represents the start of a new turn.
+  * A new turn starts when a user sends text content (not a tool result).
+@@ -190,24 +216,28 @@ export function identifyTurns(entries: SessionEntry[]): Turn[] {
+ export function applyRemovals(entries: SessionEntry[], options: RemovalOptions): {
+   entries: SessionEntry[];
+   toolCallsRemoved: number;
++  toolCallsTruncated: number;
+   thinkingBlocksRemoved: number;
+ } {
+   const turns = identifyTurns(entries);
+   const turnCount = turns.length;
+-  
+-  // Calculate removal boundaries
+-  const toolBoundary = options.toolRemoval === "none" ? 0 :
+-    options.toolRemoval === "100" ? turnCount :
+-    Math.floor(turnCount * parseInt(options.toolRemoval) / 100);
+-  
+-  const thinkingBoundary = options.thinkingRemoval === "none" ? 0 :
+-    options.thinkingRemoval === "100" ? turnCount :
+-    Math.floor(turnCount * parseInt(options.thinkingRemoval) / 100);
++
++  // Calculate removal boundaries (numeric 0-100)
++  const toolBoundary = options.toolRemoval === 0 ? 0 :
++    options.toolRemoval >= 100 ? turnCount :
++    Math.floor(turnCount * options.toolRemoval / 100);
++
++  const thinkingBoundary = options.thinkingRemoval === 0 ? 0 :
++    options.thinkingRemoval >= 100 ? turnCount :
++    Math.floor(turnCount * options.thinkingRemoval / 100);
++
++  const toolMode = options.toolHandlingMode || "remove";
+   
+   let toolCallsRemoved = 0;
++  let toolCallsTruncated = 0;
+   let thinkingBlocksRemoved = 0;
+   const entriesToDelete = new Set<number>();
+-  const modifiedEntries: SessionEntry[] = entries.map((entry, index) => ({ ...entry }));
++  const modifiedEntries: SessionEntry[] = entries.map((entry) => ({ ...entry }));
+   
+   // First pass: Collect all tool_use IDs that need to be removed
+   const toolUseIdsToRemove = new Set<string>();
+@@ -249,29 +279,60 @@ export function applyRemovals(entries: SessionEntry[], options: RemovalOptions):
+       
+       let contentModified = false;
+       
+-      // Remove tool_use blocks (for assistant messages in removal zone)
++      // Handle tool_use blocks (for assistant messages in removal zone)
+       if (isInToolRemovalZone && entry.type === "assistant") {
+-        const beforeLength = content.length;
+-        content = content.filter((block: any) => {
+-          if (block.type === "tool_use") {
+-            toolCallsRemoved++;
+-            return false;
+-          }
+-          return true;
+-        });
+-        if (content.length !== beforeLength) contentModified = true;
++        if (toolMode === "remove") {
++          const beforeLength = content.length;
++          content = content.filter((block: any) => {
++            if (block.type === "tool_use") {
++              toolCallsRemoved++;
++              return false;
++            }
++            return true;
++          });
++          if (content.length !== beforeLength) contentModified = true;
++        } else if (toolMode === "truncate") {
++          content = content.map((block: any) => {
++            if (block.type === "tool_use" && block.input) {
++              const inputStr = typeof block.input === "string"
++                ? block.input
++                : JSON.stringify(block.input, null, 2);
++              const truncatedInput = truncateToolContent(inputStr);
++              if (truncatedInput !== inputStr) {
++                toolCallsTruncated++;
++                contentModified = true;
++                return { ...block, input: truncatedInput };
++              }
++            }
++            return block;
++          });
++        }
+       }
+-      
+-      // Remove tool_result blocks matching removed tool_use (for all user messages)
++
++      // Handle tool_result blocks (for user messages)
+       if (entry.type === "user") {
+-        const beforeLength = content.length;
+-        content = content.filter((block: any) => {
+-          if (block.type === "tool_result" && toolUseIdsToRemove.has(block.tool_use_id)) {
+-            return false;
+-          }
+-          return true;
+-        });
+-        if (content.length !== beforeLength) contentModified = true;
++        if (toolMode === "remove") {
++          const beforeLength = content.length;
++          content = content.filter((block: any) => {
++            if (block.type === "tool_result" && toolUseIdsToRemove.has(block.tool_use_id)) {
++              return false;
++            }
++            return true;
++          });
++          if (content.length !== beforeLength) contentModified = true;
++        } else if (toolMode === "truncate" && isInToolRemovalZone) {
++          content = content.map((block: any) => {
++            if (block.type === "tool_result" && typeof block.content === "string") {
++              const truncatedContent = truncateToolContent(block.content);
++              if (truncatedContent !== block.content) {
++                toolCallsTruncated++;
++                contentModified = true;
++                return { ...block, content: truncatedContent };
++              }
++            }
++            return block;
++          });
++        }
+       }
+       
+       // Remove thinking blocks surgically (for assistant messages in removal zone)
+@@ -308,6 +369,7 @@ export function applyRemovals(entries: SessionEntry[], options: RemovalOptions):
+   return {
+     entries: finalEntries,
+     toolCallsRemoved,
++    toolCallsTruncated,
+     thinkingBlocksRemoved,
+   };
+ }
+@@ -363,13 +425,19 @@ export async function cloneSession(request: CloneRequest): Promise<CloneResponse
+   const turns = identifyTurns(entries);
+   const originalTurnCount = turns.length;
+   
+-  // Apply removals
++  // Apply removals - convert string enum to numeric for v1 API
++  const toolRemovalPercent = request.toolRemoval === "none" ? 0 :
++    parseInt(request.toolRemoval, 10);
++  const thinkingRemovalPercent = request.thinkingRemoval === "none" ? 0 :
++    parseInt(request.thinkingRemoval, 10);
++
+   const removalOptions: RemovalOptions = {
+-    toolRemoval: request.toolRemoval,
+-    thinkingRemoval: request.thinkingRemoval,
++    toolRemoval: toolRemovalPercent,
++    toolHandlingMode: "remove",  // v1 always removes
++    thinkingRemoval: thinkingRemovalPercent,
+   };
+-  
+-  const { entries: modifiedEntries, toolCallsRemoved, thinkingBlocksRemoved } = 
++
++  const { entries: modifiedEntries, toolCallsRemoved, thinkingBlocksRemoved } =
+     applyRemovals(entries, removalOptions);
+   
+   // Repair parentUuid chain
+@@ -412,8 +480,8 @@ export async function cloneSession(request: CloneRequest): Promise<CloneResponse
+     targetPath: outputPath,
+     sourceId: request.sessionId,
+     sourcePath: sourcePath,
+-    toolRemoval: request.toolRemoval,
+-    thinkingRemoval: request.thinkingRemoval,
++    toolRemoval: toolRemovalPercent,
++    thinkingRemoval: thinkingRemovalPercent,
+   });
+   
+   return {
+@@ -460,22 +528,25 @@ export async function cloneSessionV2(
+       entries,
+       turns,
+       request.compressionBands,
+-      compressionConfig
++      compressionConfig,
++      request.includeUserMessages ?? false
+     );
+     entries = compressionResult.entries;
+     compressionStats = compressionResult.stats;
+     compressionTasks = compressionResult.tasks;
+   }
+ 
+-  // 4. Apply tool/thinking removal (same as v1)
++  // 4. Apply tool/thinking removal
+   const removalOptions: RemovalOptions = {
+-    toolRemoval: request.toolRemoval ?? "none",
+-    thinkingRemoval: request.thinkingRemoval ?? "none",
++    toolRemoval: request.toolRemoval ?? 0,
++    toolHandlingMode: request.toolHandlingMode ?? "remove",
++    thinkingRemoval: request.thinkingRemoval ?? 0,
+   };
+ 
+   const {
+     entries: modifiedEntries,
+     toolCallsRemoved,
++    toolCallsTruncated,
+     thinkingBlocksRemoved,
+   } = applyRemovals(entries, removalOptions);
+ 
+@@ -513,8 +584,8 @@ export async function cloneSessionV2(
+     targetPath: outputPath,
+     sourceId: request.sessionId,
+     sourcePath,
+-    toolRemoval: request.toolRemoval ?? "none",
+-    thinkingRemoval: request.thinkingRemoval ?? "none",
++    toolRemoval: request.toolRemoval ?? 0,
++    thinkingRemoval: request.thinkingRemoval ?? 0,
+     compressionBands: request.compressionBands,
+     compressionStats,
+   });
+@@ -550,6 +621,7 @@ export async function cloneSessionV2(
+       originalTurnCount,
+       outputTurnCount,
+       toolCallsRemoved,
++      toolCallsTruncated: toolCallsTruncated > 0 ? toolCallsTruncated : undefined,
+       thinkingBlocksRemoved,
+       compression: compressionStats,
+     },
+diff --git a/src/types.ts b/src/types.ts
+index 1fdf17f..017bd75 100644
+--- a/src/types.ts
++++ b/src/types.ts
+@@ -24,8 +24,9 @@ export interface Turn {
+ }
+ 
+ export interface RemovalOptions {
+-  toolRemoval: "none" | "50" | "75" | "100";
+-  thinkingRemoval: "none" | "50" | "75" | "100";
++  toolRemoval: number;  // 0-100 percentage
++  toolHandlingMode: "remove" | "truncate";
++  thinkingRemoval: number;  // 0-100 percentage
+ }
+ 
+ // Compression types for v2 API
+diff --git a/test/clone-v2-integration.test.ts b/test/clone-v2-integration.test.ts
+index ce33927..ca00ff1 100644
+--- a/test/clone-v2-integration.test.ts
++++ b/test/clone-v2-integration.test.ts
+@@ -92,9 +92,10 @@ describe("Clone V2 Integration Tests", () => {
+ 
+       const request: CloneRequestV2 = {
+         sessionId: "test-session-id",
+-        toolRemoval: "none",
+-        thinkingRemoval: "none",
++        toolRemoval: 0,
++        thinkingRemoval: 0,
+         compressionBands: [{ start: 0, end: 50, level: "compress" }],
++        includeUserMessages: true,  // Include both user and assistant messages
+       };
+ 
+       // Act
+diff --git a/test/clone.test.ts b/test/clone.test.ts
+index 62ae755..5b452bf 100644
+--- a/test/clone.test.ts
++++ b/test/clone.test.ts
+@@ -290,8 +290,8 @@ describe("Session Clone Service", () => {
+       expect(logEntry).toContain("SOURCE:");
+       expect(logEntry).toContain("11111111-1111-1111-1111-111111111111");
+       expect(logEntry).toContain("test-uuid-1234");
+-      expect(logEntry).toContain("toolRemoval=none");
+-      expect(logEntry).toContain("thinkingRemoval=none");
++      expect(logEntry).toContain("toolRemoval=0%");
++      expect(logEntry).toContain("thinkingRemoval=0%");
+     });
+   });
+ 
+diff --git a/test/compression-core.test.ts b/test/compression-core.test.ts
+index 9a79214..47e580d 100644
+--- a/test/compression-core.test.ts
++++ b/test/compression-core.test.ts
+@@ -258,7 +258,8 @@ describe("createCompressionTasks", () => {
+       { turnIndex: 0, band: { start: 0, end: 100, level: "compress" } },
+     ];
+ 
+-    const tasks = createCompressionTasks(entries, turns, mapping);
++    // With includeUserMessages=true to get both user and assistant
++    const tasks = createCompressionTasks(entries, turns, mapping, 50, true);
+ 
+     expect(tasks.length).toBe(2);
+ 
+@@ -267,11 +268,11 @@ describe("createCompressionTasks", () => {
+ 
+     expect(userTask).toBeDefined();
+     expect(userTask?.status).toBe("skipped");
+-    expect(userTask?.estimatedTokens).toBeLessThan(30);
++    expect(userTask?.estimatedTokens).toBeLessThan(50);
+ 
+     expect(assistantTask).toBeDefined();
+     expect(assistantTask?.status).toBe("skipped");
+-    expect(assistantTask?.estimatedTokens).toBeLessThan(30);
++    expect(assistantTask?.estimatedTokens).toBeLessThan(50);
+     expect(assistantTask?.level).toBe("compress");
+     expect(assistantTask?.attempt).toBe(0);
+   });
+@@ -313,7 +314,8 @@ describe("createCompressionTasks", () => {
+       { turnIndex: 1, band: null }, // No band for turn 1
+     ];
+ 
+-    const tasks = createCompressionTasks(entries, turns, mapping);
++    // With includeUserMessages=true to get both user and assistant
++    const tasks = createCompressionTasks(entries, turns, mapping, 50, true);
+ 
+     // Only messages from turn 0 should have tasks (indices 0, 1)
+     expect(tasks.length).toBe(2);
+@@ -339,7 +341,8 @@ describe("createCompressionTasks", () => {
+       { turnIndex: 0, band: { start: 0, end: 100, level: "heavy-compress" } },
+     ];
+ 
+-    const tasks = createCompressionTasks(entries, turns, mapping);
++    // With includeUserMessages=true to get both user and assistant
++    const tasks = createCompressionTasks(entries, turns, mapping, 50, true);
+ 
+     const userTask = tasks.find((t) => t.messageIndex === 0);
+     const assistantTask = tasks.find((t) => t.messageIndex === 1);
+diff --git a/test/fixtures/copilot-sessions/workspaceStorage/xyz987uvw654rst321/state.vscdb b/test/fixtures/copilot-sessions/workspaceStorage/xyz987uvw654rst321/state.vscdb
+index e659b03a48c2fd3ef61028c79efcec7db9966680..cb2ab9458a24d2cb3bf109f00f4a20619aade0ff 100644
+GIT binary patch
+delta 166
+zcmZojXh@hK&B#7c#+i|QW5QB?R_-_k?zoMGA>8bp@@y>5lXy3$%S>mE(or%nF-$Zw
+zHMh`BNi|Q?H8C+V)U`-5v(PoNG)+o2Gcrz0F-umms#YpaEiTT?&+|-CvLZ^)<aKfm
+koaPFaR)&U&xtf#b%S&)tn3$Lw8kt!bY(5}wFTltK0D)#J_W%F@
+
+delta 47
+zcmZojXh@hK&B!)U#+i|AW5QB?R-Oa~o`j8sVLa^ZvaBr5eVm(9rKdA*{wL2Uz{m;!
+DKS~VJ
+
+diff --git a/test/services/compression-user-filter.test.ts b/test/services/compression-user-filter.test.ts
+new file mode 100644
+index 0000000..96141dd
+--- /dev/null
++++ b/test/services/compression-user-filter.test.ts
+@@ -0,0 +1,84 @@
++import { describe, it, expect } from "vitest";
++import { createCompressionTasks } from "../../src/services/compression.js";
++import type { SessionEntry, Turn, TurnBandMapping } from "../../src/types.js";
++
++describe("createCompressionTasks with includeUserMessages", () => {
++  const createTestEntries = (): SessionEntry[] => [
++    {
++      type: "user",
++      uuid: "u1",
++      message: { content: "x".repeat(400) }, // 100 tokens
++    },
++    {
++      type: "assistant",
++      uuid: "a1",
++      message: { content: [{ type: "text", text: "x".repeat(400) }] },
++    },
++  ];
++
++  const turns: Turn[] = [{ startIndex: 0, endIndex: 1 }];
++  const mapping: TurnBandMapping[] = [
++    { turnIndex: 0, band: { start: 0, end: 100, level: "compress" } },
++  ];
++
++  it("excludes user messages when includeUserMessages is false (default)", () => {
++    const entries = createTestEntries();
++    const tasks = createCompressionTasks(entries, turns, mapping, 50, false);
++
++    expect(tasks.length).toBe(1);
++    expect(tasks[0].entryType).toBe("assistant");
++    expect(tasks[0].messageIndex).toBe(1);
++  });
++
++  it("includes user messages when includeUserMessages is true", () => {
++    const entries = createTestEntries();
++    const tasks = createCompressionTasks(entries, turns, mapping, 50, true);
++
++    expect(tasks.length).toBe(2);
++
++    const userTask = tasks.find((t) => t.entryType === "user");
++    const assistantTask = tasks.find((t) => t.entryType === "assistant");
++
++    expect(userTask).toBeDefined();
++    expect(userTask?.messageIndex).toBe(0);
++    expect(assistantTask).toBeDefined();
++    expect(assistantTask?.messageIndex).toBe(1);
++  });
++
++  it("defaults to excluding user messages when parameter omitted", () => {
++    const entries = createTestEntries();
++    // Calling without the includeUserMessages parameter
++    const tasks = createCompressionTasks(entries, turns, mapping, 50);
++
++    expect(tasks.length).toBe(1);
++    expect(tasks[0].entryType).toBe("assistant");
++  });
++
++  it("still skips non-user/assistant types regardless of flag", () => {
++    const entries: SessionEntry[] = [
++      { type: "summary", summary: "test" },
++      {
++        type: "assistant",
++        uuid: "a1",
++        message: { content: [{ type: "text", text: "x".repeat(400) }] },
++      },
++    ];
++
++    const customTurns: Turn[] = [{ startIndex: 0, endIndex: 1 }];
++    const customMapping: TurnBandMapping[] = [
++      { turnIndex: 0, band: { start: 0, end: 100, level: "compress" } },
++    ];
++
++    const tasks = createCompressionTasks(
++      entries,
++      customTurns,
++      customMapping,
++      50,
++      true
++    );
++
++    // Should only have assistant, not summary
++    expect(tasks.length).toBe(1);
++    expect(tasks[0].entryType).toBe("assistant");
++  });
++});
+diff --git a/test/services/session-clone-truncate.test.ts b/test/services/session-clone-truncate.test.ts
+new file mode 100644
+index 0000000..f17a17b
+--- /dev/null
++++ b/test/services/session-clone-truncate.test.ts
+@@ -0,0 +1,61 @@
++import { describe, it, expect } from "vitest";
++import { truncateToolContent } from "../../src/services/session-clone.js";
++
++describe("truncateToolContent", () => {
++  it("returns original content when under limits", () => {
++    const content = "short content";
++    expect(truncateToolContent(content)).toBe("short content");
++  });
++
++  it("returns original when exactly 3 lines and under 250 chars", () => {
++    const content = "line1\nline2\nline3";
++    expect(truncateToolContent(content)).toBe("line1\nline2\nline3");
++  });
++
++  it("truncates to 3 lines when more than 3 lines", () => {
++    const content = "line1\nline2\nline3\nline4\nline5";
++    const result = truncateToolContent(content);
++    expect(result).toBe("line1\nline2\nline3...");
++  });
++
++  it("truncates to 250 chars when content is too long", () => {
++    const content = "x".repeat(300);
++    const result = truncateToolContent(content);
++    expect(result.length).toBeLessThanOrEqual(253); // 250 + "..."
++    expect(result.endsWith("...")).toBe(true);
++  });
++
++  it("adds ellipsis when truncated by lines", () => {
++    const content = "a\nb\nc\nd";
++    const result = truncateToolContent(content);
++    expect(result).toBe("a\nb\nc...");
++  });
++
++  it("adds ellipsis when truncated by chars", () => {
++    const longLine = "x".repeat(300);
++    const result = truncateToolContent(longLine);
++    expect(result).toBe("x".repeat(250) + "...");
++  });
++
++  it("handles empty string", () => {
++    expect(truncateToolContent("")).toBe("");
++  });
++
++  it("handles null/undefined gracefully", () => {
++    expect(truncateToolContent(null as any)).toBe(null);
++    expect(truncateToolContent(undefined as any)).toBe(undefined);
++  });
++
++  it("prefers shorter limit (chars over lines)", () => {
++    // 3 lines but first line is 300 chars
++    const content = "x".repeat(300) + "\nshort\nshort";
++    const result = truncateToolContent(content);
++    expect(result.length).toBeLessThanOrEqual(253);
++  });
++
++  it("trims trailing whitespace before adding ellipsis", () => {
++    const content = "line1   \nline2\nline3   \nline4";
++    const result = truncateToolContent(content);
++    expect(result).toBe("line1   \nline2\nline3...");
++  });
++});
+diff --git a/views/pages/clone.ejs b/views/pages/clone.ejs
+index 603d0f4..4906036 100644
+--- a/views/pages/clone.ejs
++++ b/views/pages/clone.ejs
+@@ -38,20 +38,34 @@
+       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+         <div>
+           <label for="toolRemoval" class="block text-sm font-medium text-gray-700 mb-2">
+-            Tool Call Removal
++            Tool Call Percentage
+           </label>
+           <select
+             id="toolRemoval"
+             name="toolRemoval"
+             class="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+           >
+-            <option value="none">None</option>
+-            <option value="50">50% (oldest half)</option>
+-            <option value="75">75% (oldest three-quarters)</option>
+-            <option value="90">90% (oldest 90%)</option>
++            <option value="0">None</option>
++            <option value="70">70% (oldest)</option>
++            <option value="85">85% (oldest)</option>
++            <option value="95">95% (oldest)</option>
+             <option value="100">100% (all)</option>
+           </select>
+-          <p class="mt-1 text-sm text-gray-500">Remove tool calls from oldest portion</p>
++          <p class="mt-1 text-sm text-gray-500">Percentage of turns to process (from oldest)</p>
++        </div>
++        <div>
++          <label for="toolHandlingMode" class="block text-sm font-medium text-gray-700 mb-2">
++            Tool Handling Mode
++          </label>
++          <select
++            id="toolHandlingMode"
++            name="toolHandlingMode"
++            class="w-full border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
++          >
++            <option value="remove">Remove (delete completely)</option>
++            <option value="truncate">Truncate (keep first 3 lines/250 chars)</option>
++          </select>
++          <p class="mt-1 text-sm text-gray-500">How to handle tool calls</p>
+         </div>
+       </div>
+ 
+@@ -96,6 +110,13 @@
+         </div>
+         <p id="band-preview" class="mt-2 text-sm text-gray-500">No compression</p>
+         <p id="band-errors" class="mt-1 text-sm text-red-600 hidden"></p>
++        <div class="mt-4">
++          <label class="flex items-center">
++            <input type="checkbox" id="includeUserMessages" name="includeUserMessages" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
++            <span class="ml-2 text-sm text-gray-700">Include user messages in compression</span>
++          </label>
++          <p class="ml-6 text-xs text-gray-500">By default, only assistant messages are compressed</p>
++        </div>
+       </div>
+ 
+       <!-- Debug Log Option -->
+-- 
+2.49.0
+

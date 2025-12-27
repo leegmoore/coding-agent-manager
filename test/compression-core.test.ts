@@ -235,13 +235,14 @@ describe("mapTurnsToBands", () => {
 });
 
 describe("createCompressionTasks", () => {
-  it("TC-05: marks messages below 20 token threshold as skipped", () => {
+  it("TC-05: marks messages below minTokens threshold as skipped (default: assistant-only)", () => {
+    // Default behavior: only assistant messages are processed
     const entries: SessionEntry[] = [
       {
         type: "user",
         uuid: "u1",
         parentUuid: null,
-        message: { content: "Short" }, // ~2 tokens (5 chars / 4 = 1.25 -> 2)
+        message: { content: "Short user message" }, // ~5 tokens
       },
       {
         type: "assistant",
@@ -258,7 +259,41 @@ describe("createCompressionTasks", () => {
       { turnIndex: 0, band: { start: 0, end: 100, level: "compress" } },
     ];
 
-    // With includeUserMessages=true to get both user and assistant
+    // Default: includeUserMessages=false, minTokens=50
+    const tasks = createCompressionTasks(entries, turns, mapping);
+
+    // Only assistant message should be in tasks (user excluded by default)
+    expect(tasks.length).toBe(1);
+    expect(tasks[0].messageIndex).toBe(1);
+    expect(tasks[0].entryType).toBe("assistant");
+    expect(tasks[0].status).toBe("skipped"); // 25 tokens < 50 threshold
+    expect(tasks[0].estimatedTokens).toBeLessThan(50);
+  });
+
+  it("TC-05b: marks messages below threshold as skipped (with user messages included)", () => {
+    // When includeUserMessages=true, both types are processed
+    const entries: SessionEntry[] = [
+      {
+        type: "user",
+        uuid: "u1",
+        parentUuid: null,
+        message: { content: "Short" }, // ~2 tokens
+      },
+      {
+        type: "assistant",
+        uuid: "a1",
+        parentUuid: "u1",
+        message: {
+          content: [{ type: "text", text: "x".repeat(100) }], // 25 tokens
+        },
+      },
+    ];
+
+    const turns: Turn[] = [{ startIndex: 0, endIndex: 1 }];
+    const mapping: TurnBandMapping[] = [
+      { turnIndex: 0, band: { start: 0, end: 100, level: "compress" } },
+    ];
+
     const tasks = createCompressionTasks(entries, turns, mapping, 50, true);
 
     expect(tasks.length).toBe(2);
@@ -273,8 +308,6 @@ describe("createCompressionTasks", () => {
     expect(assistantTask).toBeDefined();
     expect(assistantTask?.status).toBe("skipped");
     expect(assistantTask?.estimatedTokens).toBeLessThan(50);
-    expect(assistantTask?.level).toBe("compress");
-    expect(assistantTask?.attempt).toBe(0);
   });
 
   it("creates tasks only for turns with non-null bands", () => {

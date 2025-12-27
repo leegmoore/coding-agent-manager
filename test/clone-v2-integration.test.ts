@@ -85,7 +85,52 @@ describe("Clone V2 Integration Tests", () => {
   });
 
   describe("TC-08: Token Statistics", () => {
-    it("returns accurate token statistics", async () => {
+    it("returns accurate token statistics (default: assistant-only)", async () => {
+      // Arrange
+      const fixtureContent = createFixtureWith6Turns();
+      vi.mocked(readFile).mockResolvedValue(fixtureContent);
+
+      const request: CloneRequestV2 = {
+        sessionId: "test-session-id",
+        toolRemoval: 0,
+        thinkingRemoval: 0,
+        compressionBands: [{ start: 0, end: 50, level: "compress" }],
+        // Default: includeUserMessages=false (assistant-only)
+      };
+
+      // Act
+      const result = await cloneSessionV2(request);
+
+      // Assert
+      expect(result.success).toBe(true);
+      expect(result.stats.compression).toBeDefined();
+
+      // First 50% of 6 turns = turns 0, 1, 2 (positions 0%, 16.67%, 33.33%)
+      // Default only compresses assistant messages:
+      // Turn 0: Assistant 200 tokens
+      // Turn 1: Assistant 250 tokens
+      // Turn 2: Assistant 200 tokens
+      // Total in band: 650 tokens (3 assistant messages)
+      expect(result.stats.compression?.originalTokens).toBe(650);
+
+      // Mock returns floor(chars*0.35) then ceil(chars/4) for tokens
+      // 200 tok (800c) -> 280c -> 70t
+      // 250 tok (1000c) -> 350c -> 88t
+      // 200 tok (800c) -> 280c -> 70t
+      // Total: 70+88+70 = 228 tokens
+      expect(result.stats.compression?.compressedTokens).toBe(228);
+
+      // Tokens removed: 650 - 228 = 422
+      expect(result.stats.compression?.tokensRemoved).toBe(422);
+
+      // Reduction percent: 422 / 650 * 100 = 65% (rounded)
+      expect(result.stats.compression?.reductionPercent).toBe(65);
+
+      // 3 assistant messages compressed
+      expect(result.stats.compression?.messagesCompressed).toBe(3);
+    });
+
+    it("returns accurate token statistics (with user messages included)", async () => {
       // Arrange
       const fixtureContent = createFixtureWith6Turns();
       vi.mocked(readFile).mockResolvedValue(fixtureContent);
@@ -106,14 +151,14 @@ describe("Clone V2 Integration Tests", () => {
       expect(result.stats.compression).toBeDefined();
 
       // First 50% of 6 turns = turns 0, 1, 2 (positions 0%, 16.67%, 33.33%)
-      // Turn 0: 100 + 200 = 300 tokens
-      // Turn 1: 150 + 250 = 400 tokens
-      // Turn 2: 100 + 200 = 300 tokens
+      // With includeUserMessages=true, compresses both:
+      // Turn 0: User 100 + Assistant 200 = 300 tokens
+      // Turn 1: User 150 + Assistant 250 = 400 tokens
+      // Turn 2: User 100 + Assistant 200 = 300 tokens
       // Total in band: 1000 tokens (6 messages)
       expect(result.stats.compression?.originalTokens).toBe(1000);
 
       // Mock returns floor(chars*0.35) then ceil(chars/4) for tokens
-      // Due to rounding of ceil on individual messages:
       // 100 tok (400c) -> 140c -> 35t, 200 tok (800c) -> 280c -> 70t
       // 150 tok (600c) -> 210c -> 53t, 250 tok (1000c) -> 350c -> 88t
       // 100 tok -> 35t, 200 tok -> 70t
@@ -139,8 +184,8 @@ describe("Clone V2 Integration Tests", () => {
 
       const request: CloneRequestV2 = {
         sessionId: "test-session-tool-calls",
-        toolRemoval: "50",
-        thinkingRemoval: "none",
+        toolRemoval: 50,
+        thinkingRemoval: 0,
         compressionBands: [{ start: 0, end: 100, level: "compress" }],
       };
 
@@ -234,8 +279,8 @@ describe("Clone V2 Integration Tests", () => {
 
       const request: CloneRequestV2 = {
         sessionId: "test-session-id",
-        toolRemoval: "none",
-        thinkingRemoval: "none",
+        toolRemoval: 0,
+        thinkingRemoval: 0,
         compressionBands: [{ start: 0, end: 50, level: "compress" }],
       };
 
@@ -264,8 +309,8 @@ describe("Clone V2 Integration Tests", () => {
 
       const request: CloneRequestV2 = {
         sessionId: "test-session-id",
-        toolRemoval: "none",
-        thinkingRemoval: "none",
+        toolRemoval: 0,
+        thinkingRemoval: 0,
         compressionBands: [
           { start: 0, end: 30, level: "heavy-compress" },
           { start: 30, end: 60, level: "compress" },
@@ -292,8 +337,8 @@ describe("Clone V2 Integration Tests", () => {
 
       const request: CloneRequestV2 = {
         sessionId: "test-session-id",
-        toolRemoval: "none",
-        thinkingRemoval: "none",
+        toolRemoval: 0,
+        thinkingRemoval: 0,
         compressionBands: [],
       };
 
@@ -313,8 +358,8 @@ describe("Clone V2 Integration Tests", () => {
 
       const request: CloneRequestV2 = {
         sessionId: "test-session-id",
-        toolRemoval: "none",
-        thinkingRemoval: "none",
+        toolRemoval: 0,
+        thinkingRemoval: 0,
         // compressionBands not specified
       };
 
@@ -333,8 +378,8 @@ describe("Clone V2 Integration Tests", () => {
 
       const request: CloneRequestV2 = {
         sessionId: "test-session-id",
-        toolRemoval: "none",
-        thinkingRemoval: "none",
+        toolRemoval: 0,
+        thinkingRemoval: 0,
         compressionBands: [{ start: 0, end: 100, level: "compress" }],
       };
 
