@@ -258,7 +258,8 @@ describe("createCompressionTasks", () => {
       { turnIndex: 0, band: { start: 0, end: 100, level: "compress" } },
     ];
 
-    const tasks = createCompressionTasks(entries, turns, mapping);
+    // With includeUserMessages=true to get both user and assistant
+    const tasks = createCompressionTasks(entries, turns, mapping, 50, true);
 
     expect(tasks.length).toBe(2);
 
@@ -267,11 +268,11 @@ describe("createCompressionTasks", () => {
 
     expect(userTask).toBeDefined();
     expect(userTask?.status).toBe("skipped");
-    expect(userTask?.estimatedTokens).toBeLessThan(30);
+    expect(userTask?.estimatedTokens).toBeLessThan(50);
 
     expect(assistantTask).toBeDefined();
     expect(assistantTask?.status).toBe("skipped");
-    expect(assistantTask?.estimatedTokens).toBeLessThan(30);
+    expect(assistantTask?.estimatedTokens).toBeLessThan(50);
     expect(assistantTask?.level).toBe("compress");
     expect(assistantTask?.attempt).toBe(0);
   });
@@ -313,7 +314,8 @@ describe("createCompressionTasks", () => {
       { turnIndex: 1, band: null }, // No band for turn 1
     ];
 
-    const tasks = createCompressionTasks(entries, turns, mapping);
+    // With includeUserMessages=true to get both user and assistant
+    const tasks = createCompressionTasks(entries, turns, mapping, 50, true);
 
     // Only messages from turn 0 should have tasks (indices 0, 1)
     expect(tasks.length).toBe(2);
@@ -339,7 +341,8 @@ describe("createCompressionTasks", () => {
       { turnIndex: 0, band: { start: 0, end: 100, level: "heavy-compress" } },
     ];
 
-    const tasks = createCompressionTasks(entries, turns, mapping);
+    // With includeUserMessages=true to get both user and assistant
+    const tasks = createCompressionTasks(entries, turns, mapping, 50, true);
 
     const userTask = tasks.find((t) => t.messageIndex === 0);
     const assistantTask = tasks.find((t) => t.messageIndex === 1);

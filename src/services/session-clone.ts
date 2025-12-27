@@ -127,6 +127,32 @@ function createSummaryEntry(entries: SessionEntry[], firstUserMessage: string): 
 }
 
 /**
+ * Truncate tool content to 3 lines or 250 characters, whichever comes first.
+ * Adds '...' suffix when truncated.
+ */
+export function truncateToolContent(content: string): string {
+  if (!content) return content;
+
+  const maxLines = 3;
+  const maxChars = 250;
+
+  const lines = content.split('\n');
+  let truncated = lines.slice(0, maxLines).join('\n');
+  let wasTruncated = lines.length > maxLines;
+
+  if (truncated.length > maxChars) {
+    truncated = truncated.slice(0, maxChars);
+    wasTruncated = true;
+  }
+
+  if (wasTruncated) {
+    truncated = truncated.trimEnd() + '...';
+  }
+
+  return truncated;
+}
+
+/**
  * Determines if an entry represents the start of a new turn.
  * A new turn starts when a user sends text content (not a tool result).
  */
@@ -190,24 +216,28 @@ export function identifyTurns(entries: SessionEntry[]): Turn[] {
 export function applyRemovals(entries: SessionEntry[], options: RemovalOptions): {
   entries: SessionEntry[];
   toolCallsRemoved: number;
+  toolCallsTruncated: number;
   thinkingBlocksRemoved: number;
 } {
   const turns = identifyTurns(entries);
   const turnCount = turns.length;
-  
-  // Calculate removal boundaries
-  const toolBoundary = options.toolRemoval === "none" ? 0 :
-    options.toolRemoval === "100" ? turnCount :
-    Math.floor(turnCount * parseInt(options.toolRemoval) / 100);
-  
-  const thinkingBoundary = options.thinkingRemoval === "none" ? 0 :
-    options.thinkingRemoval === "100" ? turnCount :
-    Math.floor(turnCount * parseInt(options.thinkingRemoval) / 100);
+
+  // Calculate removal boundaries (numeric 0-100)
+  const toolBoundary = options.toolRemoval === 0 ? 0 :
+    options.toolRemoval >= 100 ? turnCount :
+    Math.floor(turnCount * options.toolRemoval / 100);
+
+  const thinkingBoundary = options.thinkingRemoval === 0 ? 0 :
+    options.thinkingRemoval >= 100 ? turnCount :
+    Math.floor(turnCount * options.thinkingRemoval / 100);
+
+  const toolMode = options.toolHandlingMode || "remove";
   
   let toolCallsRemoved = 0;
+  let toolCallsTruncated = 0;
   let thinkingBlocksRemoved = 0;
   const entriesToDelete = new Set<number>();
-  const modifiedEntries: SessionEntry[] = entries.map((entry, index) => ({ ...entry }));
+  const modifiedEntries: SessionEntry[] = entries.map((entry) => ({ ...entry }));
   
   // First pass: Collect all tool_use IDs that need to be removed
   const toolUseIdsToRemove = new Set<string>();
@@ -249,29 +279,60 @@ export function applyRemovals(entries: SessionEntry[], options: RemovalOptions):
       
       let contentModified = false;
       
-      // Remove tool_use blocks (for assistant messages in removal zone)
+      // Handle tool_use blocks (for assistant messages in removal zone)
       if (isInToolRemovalZone && entry.type === "assistant") {
-        const beforeLength = content.length;
-        content = content.filter((block: any) => {
-          if (block.type === "tool_use") {
-            toolCallsRemoved++;
-            return false;
-          }
-          return true;
-        });
-        if (content.length !== beforeLength) contentModified = true;
+        if (toolMode === "remove") {
+          const beforeLength = content.length;
+          content = content.filter((block: any) => {
+            if (block.type === "tool_use") {
+              toolCallsRemoved++;
+              return false;
+            }
+            return true;
+          });
+          if (content.length !== beforeLength) contentModified = true;
+        } else if (toolMode === "truncate") {
+          content = content.map((block: any) => {
+            if (block.type === "tool_use" && block.input) {
+              const inputStr = typeof block.input === "string"
+                ? block.input
+                : JSON.stringify(block.input, null, 2);
+              const truncatedInput = truncateToolContent(inputStr);
+              if (truncatedInput !== inputStr) {
+                toolCallsTruncated++;
+                contentModified = true;
+                return { ...block, input: truncatedInput };
+              }
+            }
+            return block;
+          });
+        }
       }
-      
-      // Remove tool_result blocks matching removed tool_use (for all user messages)
+
+      // Handle tool_result blocks (for user messages)
       if (entry.type === "user") {
-        const beforeLength = content.length;
-        content = content.filter((block: any) => {
-          if (block.type === "tool_result" && toolUseIdsToRemove.has(block.tool_use_id)) {
-            return false;
-          }
-          return true;
-        });
-        if (content.length !== beforeLength) contentModified = true;
+        if (toolMode === "remove") {
+          const beforeLength = content.length;
+          content = content.filter((block: any) => {
+            if (block.type === "tool_result" && toolUseIdsToRemove.has(block.tool_use_id)) {
+              return false;
+            }
+            return true;
+          });
+          if (content.length !== beforeLength) contentModified = true;
+        } else if (toolMode === "truncate" && isInToolRemovalZone) {
+          content = content.map((block: any) => {
+            if (block.type === "tool_result" && typeof block.content === "string") {
+              const truncatedContent = truncateToolContent(block.content);
+              if (truncatedContent !== block.content) {
+                toolCallsTruncated++;
+                contentModified = true;
+                return { ...block, content: truncatedContent };
+              }
+            }
+            return block;
+          });
+        }
       }
       
       // Remove thinking blocks surgically (for assistant messages in removal zone)
@@ -308,6 +369,7 @@ export function applyRemovals(entries: SessionEntry[], options: RemovalOptions):
   return {
     entries: finalEntries,
     toolCallsRemoved,
+    toolCallsTruncated,
     thinkingBlocksRemoved,
   };
 }
@@ -363,13 +425,19 @@ export async function cloneSession(request: CloneRequest): Promise<CloneResponse
   const turns = identifyTurns(entries);
   const originalTurnCount = turns.length;
   
-  // Apply removals
+  // Apply removals - convert string enum to numeric for v1 API
+  const toolRemovalPercent = request.toolRemoval === "none" ? 0 :
+    parseInt(request.toolRemoval, 10);
+  const thinkingRemovalPercent = request.thinkingRemoval === "none" ? 0 :
+    parseInt(request.thinkingRemoval, 10);
+
   const removalOptions: RemovalOptions = {
-    toolRemoval: request.toolRemoval,
-    thinkingRemoval: request.thinkingRemoval,
+    toolRemoval: toolRemovalPercent,
+    toolHandlingMode: "remove",  // v1 always removes
+    thinkingRemoval: thinkingRemovalPercent,
   };
-  
-  const { entries: modifiedEntries, toolCallsRemoved, thinkingBlocksRemoved } = 
+
+  const { entries: modifiedEntries, toolCallsRemoved, thinkingBlocksRemoved } =
     applyRemovals(entries, removalOptions);
   
   // Repair parentUuid chain
@@ -412,8 +480,8 @@ export async function cloneSession(request: CloneRequest): Promise<CloneResponse
     targetPath: outputPath,
     sourceId: request.sessionId,
     sourcePath: sourcePath,
-    toolRemoval: request.toolRemoval,
-    thinkingRemoval: request.thinkingRemoval,
+    toolRemoval: toolRemovalPercent,
+    thinkingRemoval: thinkingRemovalPercent,
   });
   
   return {
@@ -460,22 +528,25 @@ export async function cloneSessionV2(
       entries,
       turns,
       request.compressionBands,
-      compressionConfig
+      compressionConfig,
+      request.includeUserMessages ?? false
     );
     entries = compressionResult.entries;
     compressionStats = compressionResult.stats;
     compressionTasks = compressionResult.tasks;
   }
 
-  // 4. Apply tool/thinking removal (same as v1)
+  // 4. Apply tool/thinking removal
   const removalOptions: RemovalOptions = {
-    toolRemoval: request.toolRemoval ?? "none",
-    thinkingRemoval: request.thinkingRemoval ?? "none",
+    toolRemoval: request.toolRemoval ?? 0,
+    toolHandlingMode: request.toolHandlingMode ?? "remove",
+    thinkingRemoval: request.thinkingRemoval ?? 0,
   };
 
   const {
     entries: modifiedEntries,
     toolCallsRemoved,
+    toolCallsTruncated,
     thinkingBlocksRemoved,
   } = applyRemovals(entries, removalOptions);
 
@@ -513,8 +584,8 @@ export async function cloneSessionV2(
     targetPath: outputPath,
     sourceId: request.sessionId,
     sourcePath,
-    toolRemoval: request.toolRemoval ?? "none",
-    thinkingRemoval: request.thinkingRemoval ?? "none",
+    toolRemoval: request.toolRemoval ?? 0,
+    thinkingRemoval: request.thinkingRemoval ?? 0,
     compressionBands: request.compressionBands,
     compressionStats,
   });
@@ -550,6 +621,7 @@ export async function cloneSessionV2(
       originalTurnCount,
       outputTurnCount,
       toolCallsRemoved,
+      toolCallsTruncated: toolCallsTruncated > 0 ? toolCallsTruncated : undefined,
       thinkingBlocksRemoved,
       compression: compressionStats,
     },

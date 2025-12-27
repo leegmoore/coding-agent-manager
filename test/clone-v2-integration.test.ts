@@ -92,9 +92,10 @@ describe("Clone V2 Integration Tests", () => {
 
       const request: CloneRequestV2 = {
         sessionId: "test-session-id",
-        toolRemoval: "none",
-        thinkingRemoval: "none",
+        toolRemoval: 0,
+        thinkingRemoval: 0,
         compressionBands: [{ start: 0, end: 50, level: "compress" }],
+        includeUserMessages: true,  // Include both user and assistant messages
       };
 
       // Act

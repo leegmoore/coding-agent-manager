@@ -17,9 +17,11 @@ function validateNonOverlappingBands(data: { compressionBands?: { start: number;
 
 export const CloneRequestSchemaV2 = z.object({
   sessionId: z.string().uuid(),
-  toolRemoval: z.enum(["none", "50", "75", "100"]).default("none"),
-  thinkingRemoval: z.enum(["none", "50", "75", "100"]).default("none"),
+  toolRemoval: z.number().min(0).max(100).default(0),
+  toolHandlingMode: z.enum(["remove", "truncate"]).default("remove"),
+  thinkingRemoval: z.number().min(0).max(100).default(0),
   compressionBands: z.array(CompressionBandSchema).optional(),
+  includeUserMessages: z.boolean().default(false),
   debugLog: z.boolean().optional().default(false),
 }).refine(validateNonOverlappingBands, "Compression bands must not overlap");
 
@@ -41,6 +43,7 @@ export const CloneResponseSchemaV2 = z.object({
     originalTurnCount: z.number(),
     outputTurnCount: z.number(),
     toolCallsRemoved: z.number(),
+    toolCallsTruncated: z.number().optional(),
     thinkingBlocksRemoved: z.number(),
     compression: CompressionStatsSchema.optional(),
   }),

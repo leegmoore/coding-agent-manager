@@ -24,8 +24,9 @@ export interface Turn {
 }
 
 export interface RemovalOptions {
-  toolRemoval: "none" | "50" | "75" | "100";
-  thinkingRemoval: "none" | "50" | "75" | "100";
+  toolRemoval: number;  // 0-100 percentage
+  toolHandlingMode: "remove" | "truncate";
+  thinkingRemoval: number;  // 0-100 percentage
 }
 
 // Compression types for v2 API

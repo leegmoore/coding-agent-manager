@@ -23,6 +23,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const bandPreview = document.getElementById('band-preview');
   const bandErrors = document.getElementById('band-errors');
   const debugLogCheckbox = document.getElementById('debugLog');
+  const toolHandlingModeSelect = document.getElementById('toolHandlingMode');
+  const includeUserMessagesCheckbox = document.getElementById('includeUserMessages');
   const compressionStatsDiv = document.getElementById('compression-stats');
   const compressionStatsList = document.getElementById('compression-stats-list');
   const debugLogLinkDiv = document.getElementById('debug-log-link');
@@ -129,12 +131,17 @@ document.addEventListener('DOMContentLoaded', () => {
       // Build request body with compression options
       const compressionBands = buildCompressionBands(band1Input.value, band2Input.value);
       const debugLog = debugLogCheckbox.checked;
+      const toolRemovalValue = formData.get('toolRemoval');
+      const toolHandlingMode = toolHandlingModeSelect?.value || 'remove';
+      const includeUserMessages = includeUserMessagesCheckbox?.checked || false;
 
       const result = await post('/api/v2/clone', {
         sessionId,
-        toolRemoval: formData.get('toolRemoval'),
-        thinkingRemoval: '100', // Always remove all thinking blocks
+        toolRemoval: parseInt(toolRemovalValue, 10) || 0,
+        toolHandlingMode,
+        thinkingRemoval: 100, // Always remove all thinking blocks
         compressionBands,
+        includeUserMessages,
         debugLog,
       });
 

@@ -146,14 +146,16 @@ function calculateInitialTimeout(estimatedTokens: number): number {
 
 /**
  * Create compression tasks for messages in turns that have compression bands.
- * Messages below the minimum token threshold (default 30) get status "skipped".
+ * Messages below the minimum token threshold (default 50) get status "skipped".
  * Only creates tasks for user and assistant message types.
+ * If includeUserMessages is false, only assistant messages are compressed.
  */
 export function createCompressionTasks(
   entries: SessionEntry[],
   turns: Turn[],
   mapping: TurnBandMapping[],
-  minTokens: number = 30
+  minTokens: number = 50,
+  includeUserMessages: boolean = false
 ): CompressionTask[] {
   const tasks: CompressionTask[] = [];
 
@@ -169,8 +171,12 @@ export function createCompressionTasks(
     for (let entryIndex = turn.startIndex; entryIndex <= turn.endIndex; entryIndex++) {
       const entry = entries[entryIndex];
 
-      // Only process user and assistant message types
-      if (entry.type !== "user" && entry.type !== "assistant") {
+      // Filter by message type based on includeUserMessages
+      if (entry.type === "assistant") {
+        // Always include assistant messages
+      } else if (entry.type === "user" && includeUserMessages) {
+        // Only include user messages if flag is true
+      } else {
         continue;
       }
 
@@ -271,12 +277,14 @@ export function calculateStats(
  * Main compression orchestration function.
  * Orchestrates turn mapping, task creation, batch processing, and result application.
  * Returns entries, stats, and all tasks (for debug logging).
+ * If includeUserMessages is false (default), only assistant messages are compressed.
  */
 export async function compressMessages(
   entries: SessionEntry[],
   turns: Turn[],
   bands: CompressionBand[],
-  config: CompressionConfig
+  config: CompressionConfig,
+  includeUserMessages: boolean = false
 ): Promise<{ entries: SessionEntry[]; stats: CompressionStats; tasks: CompressionTask[] }> {
   // Handle empty bands case - return unchanged
   if (bands.length === 0) {
@@ -299,7 +307,7 @@ export async function compressMessages(
   const mapping = mapTurnsToBands(turns, bands);
 
   // Create tasks (includes both pending and skipped tasks)
-  const allTasks = createCompressionTasks(entries, turns, mapping, config.minTokens);
+  const allTasks = createCompressionTasks(entries, turns, mapping, config.minTokens, includeUserMessages);
 
   // Separate pending tasks for processing (skipped tasks stay as-is)
   const pendingTasks = allTasks.filter((t) => t.status === "pending");

@@ -290,8 +290,8 @@ describe("Session Clone Service", () => {
       expect(logEntry).toContain("SOURCE:");
       expect(logEntry).toContain("11111111-1111-1111-1111-111111111111");
       expect(logEntry).toContain("test-uuid-1234");
-      expect(logEntry).toContain("toolRemoval=none");
-      expect(logEntry).toContain("thinkingRemoval=none");
+      expect(logEntry).toContain("toolRemoval=0%");
+      expect(logEntry).toContain("thinkingRemoval=0%");
     });
   });
 

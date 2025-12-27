@@ -8,8 +8,8 @@ export interface LineageEntry {
   targetPath: string;
   sourceId: string;
   sourcePath: string;
-  toolRemoval: string;
-  thinkingRemoval: string;
+  toolRemoval: number;
+  thinkingRemoval: number;
   // New v2 fields (optional for backward compatibility)
   compressionBands?: CompressionBand[];
   compressionStats?: CompressionStats;
