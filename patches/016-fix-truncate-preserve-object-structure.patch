@@ -1,0 +1,214 @@
+From 5e2a0d7df66da2c46720d854d831ec1b26181b7f Mon Sep 17 00:00:00 2001
+From: leegmoore <lee.g.moore@gmail.com>
+Date: Sat, 27 Dec 2025 09:50:19 -0500
+Subject: [PATCH] fix: Preserve object structure when truncating tool_use.input
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The previous implementation stringified objects before truncating,
+resulting in invalid truncated JSON strings where objects were expected.
+
+Now uses truncateObjectValues() which recursively truncates string
+values within objects while preserving the object structure, types,
+and valid JSON.
+
+- Add truncateObjectValues() for structure-preserving truncation
+- Update tool_use truncation to use new function
+- Add 9 tests for truncateObjectValues behavior
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+---
+ src/services/session-clone.ts                | 48 ++++++++--
+ test/services/session-clone-truncate.test.ts | 98 +++++++++++++++++++-
+ 2 files changed, 139 insertions(+), 7 deletions(-)
+
+diff --git a/src/services/session-clone.ts b/src/services/session-clone.ts
+index 8d6334e..7c56f6f 100644
+--- a/src/services/session-clone.ts
++++ b/src/services/session-clone.ts
+@@ -127,7 +127,7 @@ function createSummaryEntry(entries: SessionEntry[], firstUserMessage: string):
+ }
+ 
+ /**
+- * Truncate tool content to 3 lines or 250 characters, whichever comes first.
++ * Truncate a string to 3 lines or 250 characters, whichever comes first.
+  * Adds '...' suffix when truncated.
+  */
+ export function truncateToolContent(content: string): string {
+@@ -152,6 +152,45 @@ export function truncateToolContent(content: string): string {
+   return truncated;
+ }
+ 
++/**
++ * Truncate string values within an object, preserving structure.
++ * Returns a new object with truncated string values.
++ */
++export function truncateObjectValues(obj: unknown): { result: unknown; wasTruncated: boolean } {
++  if (obj === null || obj === undefined) {
++    return { result: obj, wasTruncated: false };
++  }
++
++  if (typeof obj === 'string') {
++    const truncated = truncateToolContent(obj);
++    return { result: truncated, wasTruncated: truncated !== obj };
++  }
++
++  if (Array.isArray(obj)) {
++    let anyTruncated = false;
++    const result = obj.map(item => {
++      const { result: truncatedItem, wasTruncated } = truncateObjectValues(item);
++      if (wasTruncated) anyTruncated = true;
++      return truncatedItem;
++    });
++    return { result, wasTruncated: anyTruncated };
++  }
++
++  if (typeof obj === 'object') {
++    let anyTruncated = false;
++    const result: Record<string, unknown> = {};
++    for (const [key, value] of Object.entries(obj)) {
++      const { result: truncatedValue, wasTruncated } = truncateObjectValues(value);
++      if (wasTruncated) anyTruncated = true;
++      result[key] = truncatedValue;
++    }
++    return { result, wasTruncated: anyTruncated };
++  }
++
++  // Numbers, booleans, etc - pass through unchanged
++  return { result: obj, wasTruncated: false };
++}
++
+ /**
+  * Determines if an entry represents the start of a new turn.
+  * A new turn starts when a user sends text content (not a tool result).
+@@ -294,11 +333,8 @@ export function applyRemovals(entries: SessionEntry[], options: RemovalOptions):
+         } else if (toolMode === "truncate") {
+           content = content.map((block: any) => {
+             if (block.type === "tool_use" && block.input) {
+-              const inputStr = typeof block.input === "string"
+-                ? block.input
+-                : JSON.stringify(block.input, null, 2);
+-              const truncatedInput = truncateToolContent(inputStr);
+-              if (truncatedInput !== inputStr) {
++              const { result: truncatedInput, wasTruncated } = truncateObjectValues(block.input);
++              if (wasTruncated) {
+                 toolCallsTruncated++;
+                 contentModified = true;
+                 return { ...block, input: truncatedInput };
+diff --git a/test/services/session-clone-truncate.test.ts b/test/services/session-clone-truncate.test.ts
+index f17a17b..572aab2 100644
+--- a/test/services/session-clone-truncate.test.ts
++++ b/test/services/session-clone-truncate.test.ts
+@@ -1,5 +1,5 @@
+ import { describe, it, expect } from "vitest";
+-import { truncateToolContent } from "../../src/services/session-clone.js";
++import { truncateToolContent, truncateObjectValues } from "../../src/services/session-clone.js";
+ 
+ describe("truncateToolContent", () => {
+   it("returns original content when under limits", () => {
+@@ -59,3 +59,99 @@ describe("truncateToolContent", () => {
+     expect(result).toBe("line1   \nline2\nline3...");
+   });
+ });
++
++describe("truncateObjectValues", () => {
++  it("preserves object structure while truncating string values", () => {
++    const input = {
++      command: "x".repeat(300),
++      description: "short",
++    };
++    const { result, wasTruncated } = truncateObjectValues(input);
++
++    expect(wasTruncated).toBe(true);
++    expect(typeof result).toBe("object");
++    expect((result as any).command).toBe("x".repeat(250) + "...");
++    expect((result as any).description).toBe("short");
++  });
++
++  it("returns wasTruncated=false when nothing needs truncation", () => {
++    const input = { command: "short", description: "also short" };
++    const { result, wasTruncated } = truncateObjectValues(input);
++
++    expect(wasTruncated).toBe(false);
++    expect(result).toEqual(input);
++  });
++
++  it("handles nested objects", () => {
++    const input = {
++      outer: {
++        inner: "x".repeat(300),
++      },
++    };
++    const { result, wasTruncated } = truncateObjectValues(input);
++
++    expect(wasTruncated).toBe(true);
++    expect((result as any).outer.inner).toBe("x".repeat(250) + "...");
++  });
++
++  it("handles arrays of strings", () => {
++    const input = {
++      items: ["short", "x".repeat(300)],
++    };
++    const { result, wasTruncated } = truncateObjectValues(input);
++
++    expect(wasTruncated).toBe(true);
++    expect((result as any).items[0]).toBe("short");
++    expect((result as any).items[1]).toBe("x".repeat(250) + "...");
++  });
++
++  it("preserves numbers and booleans unchanged", () => {
++    const input = {
++      count: 42,
++      enabled: true,
++      name: "x".repeat(300),
++    };
++    const { result, wasTruncated } = truncateObjectValues(input);
++
++    expect(wasTruncated).toBe(true);
++    expect((result as any).count).toBe(42);
++    expect((result as any).enabled).toBe(true);
++  });
++
++  it("handles null and undefined", () => {
++    expect(truncateObjectValues(null).result).toBe(null);
++    expect(truncateObjectValues(undefined).result).toBe(undefined);
++  });
++
++  it("handles plain string input", () => {
++    const { result, wasTruncated } = truncateObjectValues("x".repeat(300));
++
++    expect(wasTruncated).toBe(true);
++    expect(result).toBe("x".repeat(250) + "...");
++  });
++
++  it("handles tool_use input structure correctly", () => {
++    // Real-world example: Bash tool input
++    const input = {
++      command: "git log --oneline | head -50 && git status && git diff HEAD~10",
++      description: "Check git history and status",
++    };
++    const { result, wasTruncated } = truncateObjectValues(input);
++
++    expect(wasTruncated).toBe(false); // Both strings are short
++    expect(result).toEqual(input);
++  });
++
++  it("handles tool_use input with long command", () => {
++    const input = {
++      command: "cat " + "/very/long/path/".repeat(20) + "file.txt",
++      description: "Read file",
++    };
++    const { result, wasTruncated } = truncateObjectValues(input);
++
++    expect(wasTruncated).toBe(true);
++    expect(typeof (result as any).command).toBe("string");
++    expect((result as any).command.endsWith("...")).toBe(true);
++    expect((result as any).description).toBe("Read file");
++  });
++});
+-- 
+2.49.0
+
