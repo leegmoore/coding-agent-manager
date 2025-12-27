@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { truncateToolContent } from "../../src/services/session-clone.js";
+import { truncateToolContent, truncateObjectValues } from "../../src/services/session-clone.js";
 
 describe("truncateToolContent", () => {
   it("returns original content when under limits", () => {
@@ -57,5 +57,101 @@ describe("truncateToolContent", () => {
     const content = "line1   \nline2\nline3   \nline4";
     const result = truncateToolContent(content);
     expect(result).toBe("line1   \nline2\nline3...");
+  });
+});
+
+describe("truncateObjectValues", () => {
+  it("preserves object structure while truncating string values", () => {
+    const input = {
+      command: "x".repeat(300),
+      description: "short",
+    };
+    const { result, wasTruncated } = truncateObjectValues(input);
+
+    expect(wasTruncated).toBe(true);
+    expect(typeof result).toBe("object");
+    expect((result as any).command).toBe("x".repeat(250) + "...");
+    expect((result as any).description).toBe("short");
+  });
+
+  it("returns wasTruncated=false when nothing needs truncation", () => {
+    const input = { command: "short", description: "also short" };
+    const { result, wasTruncated } = truncateObjectValues(input);
+
+    expect(wasTruncated).toBe(false);
+    expect(result).toEqual(input);
+  });
+
+  it("handles nested objects", () => {
+    const input = {
+      outer: {
+        inner: "x".repeat(300),
+      },
+    };
+    const { result, wasTruncated } = truncateObjectValues(input);
+
+    expect(wasTruncated).toBe(true);
+    expect((result as any).outer.inner).toBe("x".repeat(250) + "...");
+  });
+
+  it("handles arrays of strings", () => {
+    const input = {
+      items: ["short", "x".repeat(300)],
+    };
+    const { result, wasTruncated } = truncateObjectValues(input);
+
+    expect(wasTruncated).toBe(true);
+    expect((result as any).items[0]).toBe("short");
+    expect((result as any).items[1]).toBe("x".repeat(250) + "...");
+  });
+
+  it("preserves numbers and booleans unchanged", () => {
+    const input = {
+      count: 42,
+      enabled: true,
+      name: "x".repeat(300),
+    };
+    const { result, wasTruncated } = truncateObjectValues(input);
+
+    expect(wasTruncated).toBe(true);
+    expect((result as any).count).toBe(42);
+    expect((result as any).enabled).toBe(true);
+  });
+
+  it("handles null and undefined", () => {
+    expect(truncateObjectValues(null).result).toBe(null);
+    expect(truncateObjectValues(undefined).result).toBe(undefined);
+  });
+
+  it("handles plain string input", () => {
+    const { result, wasTruncated } = truncateObjectValues("x".repeat(300));
+
+    expect(wasTruncated).toBe(true);
+    expect(result).toBe("x".repeat(250) + "...");
+  });
+
+  it("handles tool_use input structure correctly", () => {
+    // Real-world example: Bash tool input
+    const input = {
+      command: "git log --oneline | head -50 && git status && git diff HEAD~10",
+      description: "Check git history and status",
+    };
+    const { result, wasTruncated } = truncateObjectValues(input);
+
+    expect(wasTruncated).toBe(false); // Both strings are short
+    expect(result).toEqual(input);
+  });
+
+  it("handles tool_use input with long command", () => {
+    const input = {
+      command: "cat " + "/very/long/path/".repeat(20) + "file.txt",
+      description: "Read file",
+    };
+    const { result, wasTruncated } = truncateObjectValues(input);
+
+    expect(wasTruncated).toBe(true);
+    expect(typeof (result as any).command).toBe("string");
+    expect((result as any).command.endsWith("...")).toBe(true);
+    expect((result as any).description).toBe("Read file");
   });
 });

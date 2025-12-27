@@ -127,7 +127,7 @@ function createSummaryEntry(entries: SessionEntry[], firstUserMessage: string): 
 }
 
 /**
- * Truncate tool content to 3 lines or 250 characters, whichever comes first.
+ * Truncate a string to 3 lines or 250 characters, whichever comes first.
  * Adds '...' suffix when truncated.
  */
 export function truncateToolContent(content: string): string {
@@ -150,6 +150,45 @@ export function truncateToolContent(content: string): string {
   }
 
   return truncated;
+}
+
+/**
+ * Truncate string values within an object, preserving structure.
+ * Returns a new object with truncated string values.
+ */
+export function truncateObjectValues(obj: unknown): { result: unknown; wasTruncated: boolean } {
+  if (obj === null || obj === undefined) {
+    return { result: obj, wasTruncated: false };
+  }
+
+  if (typeof obj === 'string') {
+    const truncated = truncateToolContent(obj);
+    return { result: truncated, wasTruncated: truncated !== obj };
+  }
+
+  if (Array.isArray(obj)) {
+    let anyTruncated = false;
+    const result = obj.map(item => {
+      const { result: truncatedItem, wasTruncated } = truncateObjectValues(item);
+      if (wasTruncated) anyTruncated = true;
+      return truncatedItem;
+    });
+    return { result, wasTruncated: anyTruncated };
+  }
+
+  if (typeof obj === 'object') {
+    let anyTruncated = false;
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj)) {
+      const { result: truncatedValue, wasTruncated } = truncateObjectValues(value);
+      if (wasTruncated) anyTruncated = true;
+      result[key] = truncatedValue;
+    }
+    return { result, wasTruncated: anyTruncated };
+  }
+
+  // Numbers, booleans, etc - pass through unchanged
+  return { result: obj, wasTruncated: false };
 }
 
 /**
@@ -294,11 +333,8 @@ export function applyRemovals(entries: SessionEntry[], options: RemovalOptions):
         } else if (toolMode === "truncate") {
           content = content.map((block: any) => {
             if (block.type === "tool_use" && block.input) {
-              const inputStr = typeof block.input === "string"
-                ? block.input
-                : JSON.stringify(block.input, null, 2);
-              const truncatedInput = truncateToolContent(inputStr);
-              if (truncatedInput !== inputStr) {
+              const { result: truncatedInput, wasTruncated } = truncateObjectValues(block.input);
+              if (wasTruncated) {
                 toolCallsTruncated++;
                 contentModified = true;
                 return { ...block, input: truncatedInput };
