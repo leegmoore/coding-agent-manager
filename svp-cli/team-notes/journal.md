@@ -113,12 +113,58 @@ $ svp stats bad-uuid  # Error with exit code 1
 
 ### Next Session
 
-Port session parsing and cloning logic from coding-agent-manager:
-- Copy and simplify parseSession()
-- Copy identifyTurns()
-- Copy applyRemovals() and truncation logic
-- Implement actual clone command
-- Implement actual stats command
+~~Port session parsing and cloning logic from coding-agent-manager~~ ✅ DONE
+
+---
+
+## 2024-12-27 - Core Implementation Complete
+
+### What Happened
+
+1. Renamed profiles for agent decision-making:
+   - emergency → critical context (>85%)
+   - routine → regular maintenance (>70%)
+   - preserve → keep recent work
+   - minimal → light touch
+
+2. Created session module:
+   - types.ts: Core types
+   - parser.ts: JSONL parsing, turn ID, stats
+   - loader.ts: File discovery
+   - cloner.ts: Removal/truncation logic
+
+3. Implemented real commands:
+   - `clone`: Works with profiles and flags
+   - `stats`: Shows all metrics including context %
+
+### Test Results
+
+```
+Session: dde1e697-...
+Original tokens: 947,675
+After emergency profile: 527,733
+Reduction: 44%
+```
+
+### Agent Decision Example
+
+An agent can now do:
+```bash
+STATS=$(svp stats $SESSION --json)
+CONTEXT=$(echo $STATS | jq '.contextPercent')
+if [ $CONTEXT -gt 85 ]; then
+  svp clone $SESSION --profile=emergency
+elif [ $CONTEXT -gt 70 ]; then
+  svp clone $SESSION --profile=routine
+fi
+```
+
+### Next Steps
+
+1. Add `report` command (session summary)
+2. Consider `recommend` command (suggest profile based on stats)
+3. Write tests
+4. Update help text with profile guidance
 
 ---
 
@@ -129,6 +175,7 @@ Port session parsing and cloning logic from coding-agent-manager:
 | 2024-12-27 | Initial | Complete | Team created, docs reviewed, ready to iterate |
 | 2024-12-27 | Review Cycle 1 | Complete | Quinn reviewed, 2 blockers + 6 issues fixed |
 | 2024-12-27 | Skeleton | Complete | CLI framework working, commands stub out |
+| 2024-12-27 | Core Impl | Complete | clone/stats working, 44% token reduction tested |
 
 ---
 
