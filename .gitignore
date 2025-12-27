@@ -9,3 +9,4 @@ clone-debug-log/
 # Migration snapshot files
 repo-snapshot-*.txt
 rich/
+rich/
