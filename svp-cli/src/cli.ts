@@ -99,6 +99,7 @@ Usage: svp <command> [options]
 Commands:
   clone <session-id>    Clone and trim a session
   stats <session-id>    Quick session statistics
+  recommend <session-id> Analyze and recommend action
   report <session-id>   Generate session report
   profiles              List available profiles
   config                Show effective configuration
@@ -177,6 +178,26 @@ Show effective configuration.
 Examples:
   svp config
   svp config --json
+`,
+    recommend: `
+Usage: svp recommend <session-id>
+
+Analyze a session and recommend an action.
+
+Recommendations:
+  CLONE     - Context is high, clone with suggested profile
+  CONTINUE  - Context is healthy, no action needed
+  START-FRESH - Session is minimal, consider starting over
+
+Profiles (by context level):
+  emergency - >85% context, remove all tool calls
+  routine   - >70% context, truncate tool calls
+  preserve  - >50% context, light cleanup
+  minimal   - Low priority, just thinking blocks
+
+Examples:
+  svp recommend abc123
+  svp recommend abc123 --json
 `,
   };
 
