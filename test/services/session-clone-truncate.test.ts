@@ -7,34 +7,34 @@ describe("truncateToolContent", () => {
     expect(truncateToolContent(content)).toBe("short content");
   });
 
-  it("returns original when exactly 3 lines and under 250 chars", () => {
-    const content = "line1\nline2\nline3";
-    expect(truncateToolContent(content)).toBe("line1\nline2\nline3");
+  it("returns original when exactly 2 lines and under 120 chars", () => {
+    const content = "line1\nline2";
+    expect(truncateToolContent(content)).toBe("line1\nline2");
   });
 
-  it("truncates to 3 lines when more than 3 lines", () => {
+  it("truncates to 2 lines when more than 2 lines", () => {
     const content = "line1\nline2\nline3\nline4\nline5";
     const result = truncateToolContent(content);
-    expect(result).toBe("line1\nline2\nline3...");
+    expect(result).toBe("line1\nline2...");
   });
 
-  it("truncates to 250 chars when content is too long", () => {
-    const content = "x".repeat(300);
+  it("truncates to 120 chars when content is too long", () => {
+    const content = "x".repeat(200);
     const result = truncateToolContent(content);
-    expect(result.length).toBeLessThanOrEqual(253); // 250 + "..."
+    expect(result.length).toBeLessThanOrEqual(123); // 120 + "..."
     expect(result.endsWith("...")).toBe(true);
   });
 
   it("adds ellipsis when truncated by lines", () => {
     const content = "a\nb\nc\nd";
     const result = truncateToolContent(content);
-    expect(result).toBe("a\nb\nc...");
+    expect(result).toBe("a\nb...");
   });
 
   it("adds ellipsis when truncated by chars", () => {
-    const longLine = "x".repeat(300);
+    const longLine = "x".repeat(200);
     const result = truncateToolContent(longLine);
-    expect(result).toBe("x".repeat(250) + "...");
+    expect(result).toBe("x".repeat(120) + "...");
   });
 
   it("handles empty string", () => {
@@ -47,30 +47,30 @@ describe("truncateToolContent", () => {
   });
 
   it("prefers shorter limit (chars over lines)", () => {
-    // 3 lines but first line is 300 chars
-    const content = "x".repeat(300) + "\nshort\nshort";
+    // 2 lines but first line is 200 chars
+    const content = "x".repeat(200) + "\nshort";
     const result = truncateToolContent(content);
-    expect(result.length).toBeLessThanOrEqual(253);
+    expect(result.length).toBeLessThanOrEqual(123);
   });
 
   it("trims trailing whitespace before adding ellipsis", () => {
     const content = "line1   \nline2\nline3   \nline4";
     const result = truncateToolContent(content);
-    expect(result).toBe("line1   \nline2\nline3...");
+    expect(result).toBe("line1   \nline2...");
   });
 });
 
 describe("truncateObjectValues", () => {
   it("preserves object structure while truncating string values", () => {
     const input = {
-      command: "x".repeat(300),
+      command: "x".repeat(200),
       description: "short",
     };
     const { result, wasTruncated } = truncateObjectValues(input);
 
     expect(wasTruncated).toBe(true);
     expect(typeof result).toBe("object");
-    expect((result as any).command).toBe("x".repeat(250) + "...");
+    expect((result as any).command).toBe("x".repeat(120) + "...");
     expect((result as any).description).toBe("short");
   });
 
@@ -85,31 +85,31 @@ describe("truncateObjectValues", () => {
   it("handles nested objects", () => {
     const input = {
       outer: {
-        inner: "x".repeat(300),
+        inner: "x".repeat(200),
       },
     };
     const { result, wasTruncated } = truncateObjectValues(input);
 
     expect(wasTruncated).toBe(true);
-    expect((result as any).outer.inner).toBe("x".repeat(250) + "...");
+    expect((result as any).outer.inner).toBe("x".repeat(120) + "...");
   });
 
   it("handles arrays of strings", () => {
     const input = {
-      items: ["short", "x".repeat(300)],
+      items: ["short", "x".repeat(200)],
     };
     const { result, wasTruncated } = truncateObjectValues(input);
 
     expect(wasTruncated).toBe(true);
     expect((result as any).items[0]).toBe("short");
-    expect((result as any).items[1]).toBe("x".repeat(250) + "...");
+    expect((result as any).items[1]).toBe("x".repeat(120) + "...");
   });
 
   it("preserves numbers and booleans unchanged", () => {
     const input = {
       count: 42,
       enabled: true,
-      name: "x".repeat(300),
+      name: "x".repeat(200),
     };
     const { result, wasTruncated } = truncateObjectValues(input);
 
@@ -124,10 +124,10 @@ describe("truncateObjectValues", () => {
   });
 
   it("handles plain string input", () => {
-    const { result, wasTruncated } = truncateObjectValues("x".repeat(300));
+    const { result, wasTruncated } = truncateObjectValues("x".repeat(200));
 
     expect(wasTruncated).toBe(true);
-    expect(result).toBe("x".repeat(250) + "...");
+    expect(result).toBe("x".repeat(120) + "...");
   });
 
   it("handles tool_use input structure correctly", () => {

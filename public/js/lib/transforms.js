@@ -16,12 +16,19 @@ export function extractSessionId(outputPath) {
  * @returns {Array<{label: string, value: number}>} Formatted stats
  */
 export function formatStats(stats) {
-  return [
+  const result = [
     { label: 'Original turns', value: stats.originalTurnCount },
     { label: 'Output turns', value: stats.outputTurnCount },
     { label: 'Tool calls removed', value: stats.toolCallsRemoved },
-    { label: 'Thinking blocks removed', value: stats.thinkingBlocksRemoved },
   ];
+
+  if (stats.toolCallsTruncated) {
+    result.push({ label: 'Tool calls truncated', value: stats.toolCallsTruncated });
+  }
+
+  result.push({ label: 'Thinking blocks removed', value: stats.thinkingBlocksRemoved });
+
+  return result;
 }
 
 /**

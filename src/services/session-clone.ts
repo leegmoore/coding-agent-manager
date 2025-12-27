@@ -127,14 +127,14 @@ function createSummaryEntry(entries: SessionEntry[], firstUserMessage: string): 
 }
 
 /**
- * Truncate a string to 3 lines or 250 characters, whichever comes first.
+ * Truncate a string to 2 lines or 120 characters, whichever comes first.
  * Adds '...' suffix when truncated.
  */
 export function truncateToolContent(content: string): string {
   if (!content) return content;
 
-  const maxLines = 3;
-  const maxChars = 250;
+  const maxLines = 2;
+  const maxChars = 120;
 
   const lines = content.split('\n');
   let truncated = lines.slice(0, maxLines).join('\n');

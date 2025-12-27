@@ -70,6 +70,33 @@ describe('formatStats', () => {
     expect(result[2]).toEqual({ label: 'Tool calls removed', value: 0 });
     expect(result[3]).toEqual({ label: 'Thinking blocks removed', value: 0 });
   });
+
+  it('includes tool calls truncated when present', () => {
+    const stats = {
+      originalTurnCount: 18,
+      outputTurnCount: 15,
+      toolCallsRemoved: 0,
+      toolCallsTruncated: 42,
+      thinkingBlocksRemoved: 3,
+    };
+
+    const result = formatStats(stats);
+
+    expect(result).toContainEqual({ label: 'Tool calls truncated', value: 42 });
+  });
+
+  it('omits tool calls truncated when zero or undefined', () => {
+    const stats = {
+      originalTurnCount: 18,
+      outputTurnCount: 15,
+      toolCallsRemoved: 5,
+      thinkingBlocksRemoved: 3,
+    };
+
+    const result = formatStats(stats);
+
+    expect(result.find(s => s.label === 'Tool calls truncated')).toBeUndefined();
+  });
 });
 
 describe('formatCompressionStats', () => {
