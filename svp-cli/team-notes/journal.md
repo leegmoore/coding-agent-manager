@@ -82,9 +82,43 @@ None currently. Lee is available for consultation.
 
 ### Next Steps
 
-1. Commit all doc updates
-2. Create project skeleton (package.json, tsconfig)
-3. Start Epic 2 (CLI Framework) implementation
+1. ✅ Commit all doc updates
+2. ✅ Create project skeleton (package.json, tsconfig)
+3. ✅ Start Epic 2 (CLI Framework) implementation
+4. Port session logic from coding-agent-manager
+5. Implement actual clone/stats functionality
+
+---
+
+## 2024-12-27 - Project Skeleton Complete
+
+### What Happened
+
+1. Created package.json with zero runtime deps
+2. Set up tsconfig.json (strict mode, ES2022)
+3. Implemented hand-rolled CLI parser (~80 lines)
+4. Created command stubs: clone, stats, profiles
+5. Built-in profiles: quick-clean, heavy-trim, preserve-recent, light-trim
+6. UUID validation for security
+7. Human-readable and --json output modes
+
+### Tested
+
+```bash
+$ svp --help          # Works
+$ svp profiles        # Lists all 4 profiles
+$ svp profiles --json # JSON output
+$ svp stats bad-uuid  # Error with exit code 1
+```
+
+### Next Session
+
+Port session parsing and cloning logic from coding-agent-manager:
+- Copy and simplify parseSession()
+- Copy identifyTurns()
+- Copy applyRemovals() and truncation logic
+- Implement actual clone command
+- Implement actual stats command
 
 ---
 
@@ -94,6 +128,7 @@ None currently. Lee is available for consultation.
 |------|---------|--------|-------|
 | 2024-12-27 | Initial | Complete | Team created, docs reviewed, ready to iterate |
 | 2024-12-27 | Review Cycle 1 | Complete | Quinn reviewed, 2 blockers + 6 issues fixed |
+| 2024-12-27 | Skeleton | Complete | CLI framework working, commands stub out |
 
 ---
 
