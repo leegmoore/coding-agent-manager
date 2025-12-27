@@ -10,24 +10,30 @@ export interface CloneProfile {
 
 /**
  * Built-in profiles
+ *
+ * Named for agent decision-making:
+ * - emergency: Critical context (>85%), remove everything
+ * - routine: Regular maintenance (>70%), truncate for some context
+ * - preserve: Keep recent work visible, lighter touch
+ * - minimal: Just thinking blocks, preserve tool history
  */
 const BUILT_IN_PROFILES: Record<string, CloneProfile> = {
-  'quick-clean': {
+  'emergency': {
     toolRemoval: 100,
     toolHandlingMode: 'remove',
     thinkingRemoval: 100,
   },
-  'heavy-trim': {
+  'routine': {
     toolRemoval: 100,
     toolHandlingMode: 'truncate',
     thinkingRemoval: 100,
   },
-  'preserve-recent': {
+  'preserve': {
     toolRemoval: 80,
-    toolHandlingMode: 'remove',
+    toolHandlingMode: 'truncate',
     thinkingRemoval: 100,
   },
-  'light-trim': {
+  'minimal': {
     toolRemoval: 50,
     toolHandlingMode: 'truncate',
     thinkingRemoval: 100,
