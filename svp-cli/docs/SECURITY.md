@@ -67,11 +67,16 @@ Reference: Claude Code managed settings documentation.
 
 ### Policy
 
-**SVP CLI does not store credentials in configuration files.**
+SVP CLI stores configuration (including optional credentials) in `~/.config/svp/.env`.
 
-All API keys and secrets (if needed in future versions) must be provided via:
-- Environment variables
-- Platform credential stores (AWS credential chain, system keychain)
+This follows the pattern established by Claude Code and Codex for MCP server API keys.
+
+### File Security
+
+- Location: `~/.config/svp/.env`
+- Permissions: `0600` (owner read/write only)
+- Format: Standard dotenv (no structured logging risk)
+- Loaded into `process.env` on startup
 
 ### Current State (v1)
 
@@ -79,10 +84,11 @@ v1 does not require any API keys. It only operates on local files.
 
 ### Future Versions
 
-If v2 adds API integrations (search providers, model providers), credentials will be:
-- Loaded from environment variables only
-- Never written to disk by SVP CLI
+If v2 adds API integrations (search providers, model providers):
+- Credentials stored in `~/.config/svp/.env`
+- File must be mode 0600
 - Never included in error messages or logs
+- Never transmitted except to the intended API
 
 ---
 
@@ -128,7 +134,7 @@ This prevents:
 
 ### Configuration Validation
 
-Configuration files are parsed with strict JSON validation. Invalid configurations produce clear errors and abort execution.
+Configuration uses `.env` format with simple key=value parsing. Invalid lines are ignored with warnings. Profile values are validated before use.
 
 ---
 
@@ -136,15 +142,19 @@ Configuration files are parsed with strict JSON validation. Invalid configuratio
 
 ### Runtime Dependencies
 
-v1 has minimal runtime dependencies:
-- `commander` - CLI framework (well-maintained, widely used)
+v1 has **zero runtime dependencies**. The CLI arg parser and configuration loader are hand-rolled (~150 lines total).
+
+This minimizes:
+- Supply chain attack surface
+- Audit burden
+- Startup time
 
 ### Supply Chain
 
 Recommendations for enterprise deployment:
-1. Pin exact versions in package-lock.json
+1. Pin exact versions in package-lock.json (dev dependencies only)
 2. Run `npm audit` before deployment
-3. Consider using a private npm registry
+3. Only tsup and vitest (build tools) are dev dependencies
 4. Review dependency licenses (MIT compatible)
 
 ---
@@ -190,7 +200,7 @@ For security teams reviewing this tool:
 - [ ] UUID validation on all session ID inputs
 - [ ] Atomic file writes prevent corruption
 - [ ] Restrictive file permissions (0600)
-- [ ] Minimal dependencies (1 runtime dep)
+- [ ] Zero runtime dependencies
 - [ ] Clear documentation of `--dangerously-skip-permissions`
 - [ ] No shell command string interpolation
 

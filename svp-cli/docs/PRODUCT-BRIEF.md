@@ -24,14 +24,14 @@ A lightweight CLI that an agent can call like any other shell command:
 # Clone and trim a Claude Code session
 svp clone abc123 --profile=heavy-trim
 
-# Search documentation
-svp search context7 "react hooks" --limit=5
-
-# Call a model directly
-echo '{"prompt": "Summarize this"}' | svp model claude --provider=bedrock
+# Quick session stats
+svp stats abc123
 
 # Generate session report
 svp report abc123 --format=md > session-analysis.md
+
+# List available profiles
+svp profiles
 ```
 
 ## Target Users
@@ -45,7 +45,7 @@ svp report abc123 --format=md > session-analysis.md
 1. **One-shot execution** - No interactive prompts, no streaming unless requested
 2. **JSON-native** - Structured input via stdin or files, structured output to stdout
 3. **Composable** - Works with pipes, xargs, parallel execution
-4. **Fast startup** - Sub-100ms for simple commands
+4. **Fast startup** - <500ms for all commands
 5. **Predictable errors** - Exit codes and structured error output
 6. **Enterprise-safe** - Innocuous naming, no alarming dependencies
 
@@ -56,7 +56,6 @@ svp report abc123 --format=md > session-analysis.md
 - Session statistics (quick metrics)
 - Session analysis and reporting
 - Profile-based configuration
-- Session auto-detection
 
 ### Deferred to v2 (if demand exists)
 - Search unification (Context7, Firecrawl, Exa)
@@ -73,15 +72,15 @@ svp report abc123 --format=md > session-analysis.md
 ## Success Metrics
 
 - Agent can reduce session context by 50%+ with single command
-- Search results returned in <2s for cached queries
+- `svp stats` returns in <200ms
 - Zero configuration required for basic usage
 - Works identically on macOS and Linux
 
-## Open Questions
+## Resolved Questions
 
-1. Should `svp` be the final name? Alternatives: `agentkit`, `ctx`, `vibe`
-2. Config file location: `~/.svprc`, `~/.config/svp/`, or project-local?
-3. Should search results be cached? If so, TTL?
+1. **Name:** `svp` (Super Vibe Protocol - enterprise-safe, short, memorable)
+2. **Config location:** `~/.config/svp/.env` (standard XDG, .env format)
+3. **Search caching:** Deferred to v2 with search feature
 
 ---
 

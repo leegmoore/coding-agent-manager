@@ -14,15 +14,19 @@ This document enables a fresh Claude session to quickly understand and continue 
 
 ---
 
-## Your Role
+## Your Identity
 
-You are the **Product Owner**. The human is the **Product Manager**.
+You are **Vex**, the Product Owner and Team Lead for SVP CLI.
 
-As PO, you:
-- Own technical decisions
-- Can push back on PM direction if you have good reasons
-- Make implementation choices
-- Coordinate work (including spawning sub-agents for reviews)
+**Your team:**
+- **Vex** (you) - PO, Team Lead, coordinates work, final approval
+- **Axel** - Senior Engineer (invoke for implementation)
+- **Quinn** - Technical Analyst (invoke for reviews)
+
+**Your stakeholder:**
+- **Lee** - PM, Enterprise Architect, Principal Engineer. Available for consultation.
+
+Read your full definition: `.claude/agents/vex.md`
 
 ---
 
@@ -35,24 +39,26 @@ As PO, you:
 | `PRD.md` | Features and epics (v1 scoped) | Understanding "what" |
 | `TECH-ARCH.md` | Architecture and stack | Understanding "how" |
 | `SECURITY.md` | Enterprise security docs | Before deployment |
+| `team-notes/journal.md` | Your working notes | Catching up on progress |
 
 ---
 
 ## Current State
 
-**Phase:** Documentation complete, reviewed, ready for implementation.
+**Phase:** Documentation complete, team established, ready for implementation.
 
 **Completed:**
 - Product brief with vision
 - PRD with 4 epics (narrowed scope)
 - Technical architecture
 - Security documentation
-- Multi-perspective review (skeptical engineer, agent user, security)
-- Incorporated feedback and narrowed v1 scope
+- Multi-perspective review
+- Team definitions (Vex, Axel, Quinn)
+- Journal started
 
 **Next Steps:**
 1. Create project skeleton (package.json, tsconfig, directory structure)
-2. Implement CLI framework (Epic 2)
+2. Implement hand-rolled CLI arg parser (no dependencies)
 3. Port session logic from parent project
 4. Implement `clone` command
 5. Implement `stats` command
@@ -68,10 +74,11 @@ As PO, you:
 
 ### Technical
 - **Language:** TypeScript (Node.js 20+)
-- **CLI Framework:** Commander.js
-- **Dependencies:** Minimal (commander only for runtime)
+- **CLI Framework:** None - hand-rolled arg parser (~80 lines)
+- **Dependencies:** Zero runtime dependencies
 - **Output:** Human-readable default, `--json` flag for structured
-- **Config:** `~/.config/svp/config.json`, no API keys in files
+- **Config:** `~/.config/svp/.env` (can hold secrets)
+- **Session ID:** Always required (no auto-detection)
 
 ### Performance
 - Startup: <500ms
@@ -81,7 +88,7 @@ As PO, you:
 ### Security
 - UUID validation on all session IDs
 - Atomic file writes
-- No credentials in config files
+- Credentials in .env file (mode 0600)
 - Document `--dangerously-skip-permissions` flag
 
 ---
@@ -92,6 +99,7 @@ As PO, you:
 - Enterprise providers: Claude CLI + Bedrock only
 - Non-interactive only (one-shot commands)
 - No native dependencies
+- No runtime dependencies
 
 ---
 
@@ -99,8 +107,14 @@ As PO, you:
 
 ```
 /Users/leemoore/code/coding-agent-manager/
+├── .claude/agents/       # Team definitions
+│   ├── vex.md            # You
+│   ├── axel.md           # Senior Engineer
+│   └── quinn.md          # Technical Analyst
 ├── svp-cli/              # This project
-│   ├── docs/             # Documentation (you are here)
+│   ├── docs/             # Documentation
+│   ├── team-notes/       # Journal and working notes
+│   │   └── journal.md    # YOUR working notes
 │   ├── src/              # Source code (to be created)
 │   └── test/             # Tests (to be created)
 ├── src/                  # Parent project (coding-agent-manager)
@@ -117,53 +131,34 @@ Port these from `coding-agent-manager/src/`:
 - `parseSession()` - Parse JSONL
 - `identifyTurns()` - Find turn boundaries
 - `applyRemovals()` - Remove tool calls/thinking
-- `truncateToolContent()` - Truncation logic
+- `truncateToolContent()`, `truncateObjectValues()` - Truncation logic
 - `estimateTokens()` - Token estimation
 
 Copy and simplify - don't import from parent.
 
 ---
 
-## Review Feedback Summary
-
-Three review perspectives were gathered:
-
-**Skeptical Engineer:**
-- Narrowed scope (removed search/model providers from v1)
-- Realistic performance targets (<500ms not <100ms)
-- Simplified config (2 layers not 5)
-
-**Agent User:**
-- Added `stats` command for quick metrics
-- Default human-readable output
-- Session auto-detection
-
-**Enterprise Security:**
-- Added SECURITY.md
-- UUID validation requirement
-- Credential handling policy
-
----
-
 ## How to Continue
 
 1. ✅ Read this file
-2. Skim PRODUCT-BRIEF.md for vision
-3. Review PRD.md for v1 feature scope
-4. Check TECH-ARCH.md for architecture details
-5. Ask the PM for current priorities
-6. Start implementation
+2. Read `team-notes/journal.md` for recent progress
+3. Skim PRODUCT-BRIEF.md for vision
+4. Review PRD.md for v1 feature scope
+5. Check TECH-ARCH.md for architecture details
+6. Update journal with your plan
+7. Start work (delegate to Axel for implementation)
 
 ---
 
-## Communication Style
+## Working Style
 
-- Be direct and opinionated as PO
+- Be direct and decisive as PO
 - Push back when you disagree
 - Make decisions rather than always asking
-- Spawn sub-agents for specific tasks
-- Keep the PM informed but don't over-explain
+- Delegate to Axel (implementation) and Quinn (review)
+- Keep Lee informed but don't over-explain
+- Update journal with decisions and progress
 
 ---
 
-*Last updated: After review feedback incorporated*
+*Last updated: 2024-12-27 - Team established, decisions finalized*

@@ -46,7 +46,8 @@ This document defines the technical architecture for SVP CLI v1. Scope has been 
 - **ESM modules** - Modern imports
 
 ### CLI Framework
-- **Commander.js** - Simple, well-documented, small footprint
+- **None** - Hand-rolled arg parser (~80 lines)
+- Zero runtime dependencies maximizes startup speed and reduces attack surface
 
 ### Build
 - **tsup** - Fast bundling, single file output
@@ -55,9 +56,9 @@ This document defines the technical architecture for SVP CLI v1. Scope has been 
 ### Testing
 - **Vitest** - Compatible with existing codebase
 
-### Dependencies (Minimal)
-- `commander` - CLI framework
-- That's it for runtime. Everything else is dev dependencies.
+### Dependencies
+- **Zero runtime dependencies** - Everything is dev dependencies only
+- Arg parsing, config loading, output formatting all hand-rolled
 
 ---
 
@@ -119,21 +120,20 @@ Do not import from parent project - copy and simplify.
 
 ## Command Implementations
 
-### `svp clone [session-id] [--profile=name]`
+### `svp clone <session-id> [--profile=name]`
 
 ```typescript
 // Pseudo-implementation
-async function clone(sessionId?: string, options?: CloneOptions) {
-  // 1. Resolve session ID (auto-detect if not provided)
-  const resolvedId = sessionId || await autoDetectSession();
+async function clone(sessionId: string, options?: CloneOptions) {
+  // 1. Session ID is required (no auto-detection)
 
   // 2. Validate UUID format (security)
-  if (!isValidUUID(resolvedId)) {
+  if (!isValidUUID(sessionId)) {
     throw new ValidationError('Invalid session ID format');
   }
 
   // 3. Load session
-  const session = await loadSession(resolvedId);
+  const session = await loadSession(sessionId);
 
   // 4. Load profile if specified, merge with defaults
   const profile = options.profile
@@ -155,12 +155,14 @@ async function clone(sessionId?: string, options?: CloneOptions) {
 }
 ```
 
-### `svp stats [session-id]`
+### `svp stats <session-id>`
 
 ```typescript
-async function stats(sessionId?: string) {
-  const resolvedId = sessionId || await autoDetectSession();
-  const session = await loadSession(resolvedId);
+async function stats(sessionId: string) {
+  if (!isValidUUID(sessionId)) {
+    throw new ValidationError('Invalid session ID format');
+  }
+  const session = await loadSession(sessionId);
 
   return {
     turns: countTurns(session),
@@ -215,56 +217,41 @@ const DEFAULTS = {
 };
 ```
 
-### User Config Schema
+### User Config (.env format)
 
-```typescript
-interface SvpConfig {
-  // Override default Claude directory
-  claudeDir?: string;
+Location: `~/.config/svp/.env`
 
-  // Custom profiles (merged with built-ins)
-  profiles?: {
-    [name: string]: {
-      toolRemoval: number;       // 0-100
-      toolHandlingMode: 'remove' | 'truncate';
-      thinkingRemoval: number;   // 0-100
-    };
-  };
-}
+```bash
+# SVP CLI Configuration
+
+# Override default Claude directory
+CLAUDE_DIR=~/.claude
+
+# Clone profiles (inline format: key:value,key:value)
+SVP_PROFILE_QUICK_CLEAN=toolRemoval:100,mode:remove,thinkingRemoval:100
+SVP_PROFILE_HEAVY_TRIM=toolRemoval:100,mode:truncate,thinkingRemoval:100
+SVP_PROFILE_PRESERVE_RECENT=toolRemoval:80,mode:remove,thinkingRemoval:100
+
+# API keys for v2 features (future)
+# OPENROUTER_API_KEY=sk-or-...
+# BEDROCK_REGION=us-east-1
 ```
 
-Location: `~/.config/svp/config.json`
+On startup, svp loads this file into `process.env`. This keeps secrets out of JSON (no structured logging risk) and allows standard dotenv tooling.
 
 ---
 
-## Session Auto-Detection
+## Session ID Requirement
 
-When session ID is omitted:
+**Session ID is always required.** No auto-detection.
 
-```typescript
-async function autoDetectSession(): Promise<string> {
-  // 1. Check CLAUDE_SESSION_ID env var (if Claude sets this)
-  if (process.env.CLAUDE_SESSION_ID) {
-    return process.env.CLAUDE_SESSION_ID;
-  }
+Rationale:
+- Auto-detection is fragile and can pick wrong session
+- Agents must track their own session IDs
+- Explicit is safer than magic
+- Simpler implementation
 
-  // 2. Find most recently modified session in current project
-  const projectPath = encodeProjectPath(process.cwd());
-  const sessions = await findSessionsInProject(projectPath);
-
-  if (sessions.length === 0) {
-    throw new Error('No sessions found for current directory');
-  }
-
-  if (sessions.length === 1) {
-    return sessions[0].id;
-  }
-
-  // Multiple sessions - use most recent
-  const mostRecent = sessions.sort((a, b) => b.mtime - a.mtime)[0];
-  return mostRecent.id;
-}
-```
+Usage: `svp clone <session-id> [--profile=name]`
 
 ---
 

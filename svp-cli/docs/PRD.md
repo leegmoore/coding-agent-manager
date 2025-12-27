@@ -34,12 +34,12 @@ Core value proposition - manage Claude Code session context.
 - Support named profiles (e.g., `--profile=heavy-trim`)
 - Options: tool removal %, thinking removal %, truncate vs remove
 - Output: new session ID + resume command
-- Auto-detect current session if no ID provided (when running in Claude Code)
+- Session ID is required (no auto-detection)
 
 **1.2 Session Stats**
 Quick metrics without full analysis:
 ```bash
-svp stats [session-id]
+svp stats <session-id>
 # Turns: 87
 # Tool calls: 234 (12 failed)
 # Tokens (est): 145K
@@ -47,7 +47,8 @@ svp stats [session-id]
 # Last activity: 2 hours ago
 ```
 - Fast execution (<200ms)
-- Auto-detect session if ID omitted
+- Session ID is required
+- Token estimation: character count / 4 (rough approximation)
 
 **1.3 Session Report**
 - Generate readable session summary
@@ -85,7 +86,7 @@ Commands:
 **2.2 Input Handling**
 - Positional arguments for common cases
 - Flags for options
-- Auto-detect session ID when possible
+- Session ID always required (no auto-detection)
 - UUID validation on all session IDs (security)
 
 **2.3 Output Modes**
@@ -103,6 +104,7 @@ Commands:
   - 1: General error
   - 2: Invalid arguments
   - 3: Configuration error
+  - 4: File system error
   - 5: Session error (not found, parse error)
 
 **2.5 Help & Examples**
@@ -119,34 +121,31 @@ Simple, predictable configuration.
 ### Features
 
 **3.1 Config Resolution (Simplified)**
-Two layers only:
-1. Built-in defaults
-2. User config (`~/.config/svp/config.json`)
+Three layers:
+1. Built-in defaults (in code)
+2. User config (`~/.config/svp/.env`)
 3. CLI flags (highest priority)
 
-No project-local config, no env var layer (except for secrets).
+No project-local config.
 
 **3.2 Clone Profiles**
-```json
-{
-  "profiles": {
-    "quick-clean": {
-      "toolRemoval": 100,
-      "toolHandlingMode": "remove",
-      "thinkingRemoval": 100
-    },
-    "heavy-trim": {
-      "toolRemoval": 100,
-      "toolHandlingMode": "truncate",
-      "thinkingRemoval": 100
-    }
-  }
-}
+Profiles defined in `.env` format:
+```bash
+# ~/.config/svp/.env
+
+# Built-in profiles are in code; these add/override
+SVP_PROFILE_QUICK_CLEAN=toolRemoval:100,toolHandlingMode:remove,thinkingRemoval:100
+SVP_PROFILE_HEAVY_TRIM=toolRemoval:100,toolHandlingMode:truncate,thinkingRemoval:100
+SVP_PROFILE_PRESERVE_RECENT=toolRemoval:80,toolHandlingMode:remove,thinkingRemoval:100
+
+# Can also store secrets here (for v2 features)
+# OPENROUTER_API_KEY=sk-or-...
 ```
 
 **3.3 Credential Handling**
-- **NO API keys in config files** (security requirement)
-- All credentials via environment variables
+- API keys stored in `~/.config/svp/.env` (file mode 0600)
+- Loaded into process.env on startup
+- Standard practice (matches Claude Code, Codex MCP configs)
 - Document required env vars in help output
 - For v1: no external API keys needed (session-only features)
 
@@ -169,18 +168,12 @@ Make this genuinely useful for AI agents.
 - No confirmation dialogs
 - Fast startup (<500ms target)
 
-**4.2 Session Auto-Detection**
-When session ID is omitted:
-- Check if running inside Claude Code session
-- Use most recently modified session in current project
-- Clear error if ambiguous
-
-**4.3 Scriptable Output**
+**4.2 Scriptable Output**
 - JSON output parseable by jq
 - Exit codes for conditionals
 - Quiet mode for pipelines
 
-**4.4 Discoverable Commands**
+**4.3 Discoverable Commands**
 - `svp` with no args shows help
 - `svp profiles` shows available profiles
 - `svp config` shows effective configuration
